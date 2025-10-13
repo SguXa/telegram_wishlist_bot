@@ -336,7 +336,7 @@ def build_wish_block(wish: Wish) -> str:
     if wish.link:
         lines.append(f"   🔗 {escape_html_text(wish.link)}")
     if wish.description:
-        lines.append(f"   СЂСџвЂ™В¬ {escape_html_text(wish.description)}")
+        lines.append(f"   📝 {escape_html_text(wish.description)}")
     return "\n".join(lines)
 
 
@@ -357,7 +357,7 @@ def sort_wishes_for_display(wishes: List[Wish]) -> List[Tuple[str, List[Wish]]]:
 
 
 def truncate(text: str, limit: int = 24) -> str:
-    return text if len(text) <= limit else f"{text[: limit - 1]}РІР‚В¦"
+    return text if len(text) <= limit else f"{text[: limit - 1]}…"
 
 
 def build_list_actions_keyboard(wishes: List[Wish]) -> InlineKeyboardBuilder:
@@ -405,17 +405,13 @@ def compose_export_txt(wishes: List[Wish]) -> str:
 def compose_export_csv(wishes: List[Wish]) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Р СњР В°Р В·Р Р†Р В°Р Р…Р С‘Р Вµ", "Р РЋРЎРѓРЎвЂ№Р В»Р С”Р В°", "Р С™Р В°РЎвЂљР ВµР С–Р С•РЎР‚Р С‘РЎРЏ", "Р С›Р С—Р С‘РЎРѓР В°Р Р…Р С‘Р Вµ", "Р СџРЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ"])
-    for wish in wishes:
-        writer.writerow(
-            [
-                wish.title,
-                wish.link,
-                wish.category,
-                wish.description,
-                wish.priority,
-            ]
-        )
+    writer.writerow([
+        "Название",
+        "Ссылка",
+        "Категория",
+        "Описание",
+        "Приоритет",
+    ])
     return output.getvalue()
 
 
@@ -581,7 +577,7 @@ async def handle_logged_out_message(message: Message) -> None:
         return
 
     await message.answer(
-        "Р вЂќР В»РЎРЏ Р С‘РЎРѓР С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°Р Р…Р С‘РЎРЏ Р В±Р С•РЎвЂљР В° Р Р…Р ВµР С•Р В±РЎвЂ¦Р С•Р Т‘Р С‘Р СР С• Р Р†Р С•Р в„–РЎвЂљР С‘. Р СњР В°Р В¶Р СР С‘РЎвЂљР Вµ Р С”Р Р…Р С•Р С—Р С”РЎС“ /login.",
+        "Бот доступен только после авторизации. Отправьте /login, чтобы войти.",
         reply_markup=get_logged_out_keyboard(),
     )
 
@@ -623,11 +619,11 @@ async def add_title(message: Message, state: FSMContext) -> None:
 
     title = (message.text or "").strip()
     if not title:
-        await message.answer("Р СњР В°Р В·Р Р†Р В°Р Р…Р С‘Р Вµ Р Р…Р Вµ Р СР С•Р В¶Р ВµРЎвЂљ Р В±РЎвЂ№РЎвЂљРЎРЉ Р С—РЎС“РЎРѓРЎвЂљРЎвЂ№Р С. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р ВµРЎвЂ°РЎвЂ РЎР‚Р В°Р В·.")
+        await message.answer("Название не может быть пустым. Введите другое значение.")
         return
     await state.update_data(title=title)
     await state.set_state(AddWish.link)
-    await message.answer("Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ РЎРѓРЎРѓРЎвЂ№Р В»Р С”РЎС“ (Р С‘Р В»Р С‘ \"-\" Р ВµРЎРѓР В»Р С‘ Р Р…Р ВµРЎвЂљ):")
+    await message.answer("Введите ссылку (или "-" если её нет):")
 
 
 @router.message(AddWish.link)
@@ -654,7 +650,7 @@ async def add_category(message: Message, state: FSMContext) -> None:
     category = (message.text or "").strip()
     await state.update_data(category=category)
     await state.set_state(AddWish.description)
-    await message.answer("Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р С•Р С—Р С‘РЎРѓР В°Р Р…Р С‘Р Вµ (Р С‘Р В»Р С‘ \"-\" Р ВµРЎРѓР В»Р С‘ Р Р…Р ВµРЎвЂљ):")
+    await message.answer("Введите описание (или \"-\" если нет):")
 
 
 @router.message(AddWish.description)
@@ -668,7 +664,7 @@ async def add_description(message: Message, state: FSMContext) -> None:
     description = "" if raw in {"", "-"} else raw
     await state.update_data(description=description)
     await state.set_state(AddWish.priority)
-    await message.answer("Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р С—РЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ (1-5):")
+    await message.answer("Введите приоритет (1-5):")
 
 
 @router.message(AddWish.priority)
@@ -680,11 +676,11 @@ async def add_priority(message: Message, state: FSMContext) -> None:
 
     raw = (message.text or "").strip()
     if not raw.isdigit():
-        await message.answer("Р СџРЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ Р Т‘Р С•Р В»Р В¶Р ВµР Р… Р В±РЎвЂ№РЎвЂљРЎРЉ РЎвЂЎР С‘РЎРѓР В»Р С•Р С Р С•РЎвЂљ 1 Р Т‘Р С• 5. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р ВµРЎвЂ°РЎвЂ РЎР‚Р В°Р В·:")
+        await message.answer("Приоритет должен быть числом от 1 до 5. Попробуйте снова:")
         return
     priority = int(raw)
     if priority < 1 or priority > 5:
-        await message.answer("Р СџРЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ Р Т‘Р С•Р В»Р В¶Р ВµР Р… Р В±РЎвЂ№РЎвЂљРЎРЉ Р Р† Р Т‘Р С‘Р В°Р С—Р В°Р В·Р С•Р Р…Р Вµ 1-5. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р ВµРЎвЂ°РЎвЂ РЎР‚Р В°Р В·:")
+        await message.answer("Приоритет должен быть в диапазоне от 1 до 5. Отправьте значение ещё раз:")
         return
 
     state_data = await state.get_data()
@@ -699,8 +695,8 @@ async def add_priority(message: Message, state: FSMContext) -> None:
     await add_wish(message.from_user.id, wish)
     await state.clear()
     await state.set_state(UserSession.active)
-    await message.answer("РІСљвЂ¦ Р вЂ“Р ВµР В»Р В°Р Р…Р С‘Р Вµ Р Т‘Р С•Р В±Р В°Р Р†Р В»Р ВµР Р…Р С•!")
-
+    await message.answer("Желание добавлено!")
+    await message.answer("🎉 Желание сохранено!")
 
 @router.message(Command("list"), StateFilter(UserSession.active))
 async def cmd_list(message: Message) -> None:
@@ -711,7 +707,7 @@ async def cmd_list(message: Message) -> None:
     await send_wish_list(
         message,
         wishes,
-        "Р вЂ™Р В°РЎв‚¬ РЎРѓР С—Р С‘РЎРѓР С•Р С” Р В¶Р ВµР В»Р В°Р Р…Р С‘Р в„– Р С—Р С•Р С”Р В° Р С—РЎС“РЎРѓРЎвЂљ. Р вЂќР С•Р В±Р В°Р Р†РЎРЉРЎвЂљР Вµ РЎвЂЎРЎвЂљР С•-РЎвЂљР С• РЎвЂЎР ВµРЎР‚Р ВµР В· /add.",
+        "Ваш список желаний пока пуст. Добавьте новое через /add.",
     )
 
 
@@ -722,14 +718,14 @@ async def cmd_others(message: Message) -> None:
 
     other_id = select_other_user(message.from_user.id)
     if other_id is None:
-        await message.answer("Р вЂ™РЎвЂљР С•РЎР‚Р С•Р в„– Р С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљР ВµР В»РЎРЉ Р Р…Р Вµ Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р ВµР Р…. Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚РЎРЉРЎвЂљР Вµ РЎРѓР С—Р С‘РЎРѓР С•Р С” Р В°Р Р†РЎвЂљР С•РЎР‚Р С‘Р В·Р С•Р Р†Р В°Р Р…Р Р…РЎвЂ№РЎвЂ¦ ID.")
+        await message.answer("Нет других пользователей с доступом к боту. Добавьте их ID в переменную AUTHORIZED_USER_IDS.")
         return
 
     wishes = list_wishes(other_id)
     await send_wish_list(
         message,
         wishes,
-        "Р Р€ Р Р†РЎвЂљР С•РЎР‚Р С•Р С–Р С• Р С—Р С•Р В»РЎРЉР В·Р С•Р Р†Р В°РЎвЂљР ВµР В»РЎРЏ Р С—Р С•Р С”Р В° Р Р…Р ВµРЎвЂљ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р в„–.",
+        "У выбранного пользователя пока нет сохранённых желаний.",
     )
 
 
@@ -740,7 +736,7 @@ async def cmd_categories(message: Message) -> None:
 
     categories = collect_categories()
     if not categories:
-        await message.answer("Р СџР С•Р С”Р В° Р Р…Р ВµРЎвЂљ Р С”Р В°РЎвЂљР ВµР С–Р С•РЎР‚Р С‘Р в„–. Р вЂќР С•Р В±Р В°Р Р†РЎРЉРЎвЂљР Вµ Р В¶Р ВµР В»Р В°Р Р…Р С‘РЎРЏ РЎвЂЎР ВµРЎР‚Р ВµР В· /add.")
+        await message.answer("Категорий пока нет. Добавьте желание с категорией через /add.")
         return
 
     lines = []
@@ -756,7 +752,7 @@ async def cmd_search(message: Message, command: CommandObject) -> None:
 
     query = (command.args or "").strip()
     if not query:
-        await message.answer("Р Р€Р С”Р В°Р В¶Р С‘РЎвЂљР Вµ РЎРѓР В»Р С•Р Р†Р С• Р Т‘Р В»РЎРЏ Р С—Р С•Р С‘РЎРѓР С”Р В°: /search Р Р…Р С•РЎС“РЎвЂљР В±РЎС“Р С”")
+        await message.answer("Используйте формат: /search <запрос>")
         return
 
     wishes = list_wishes(message.from_user.id)
@@ -766,10 +762,10 @@ async def cmd_search(message: Message, command: CommandObject) -> None:
         if query.lower() in wish.title.lower() or query.lower() in wish.description.lower()
     ]
     if not matched:
-        await message.answer("Р СњР С‘РЎвЂЎР ВµР С–Р С• Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…Р С•.")
+        await message.answer("Ничего не найдено.")
         return
 
-    await send_wish_list(message, matched, "Р СњР С‘РЎвЂЎР ВµР С–Р С• Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…Р С•.")
+    await send_wish_list(message, matched, "Ничего не найдено.")
 
 
 @router.message(Command("edit"), StateFilter(UserSession.active))
@@ -779,14 +775,14 @@ async def cmd_edit(message: Message) -> None:
 
     wishes = list_wishes(message.from_user.id)
     if not wishes:
-        await message.answer("Р Р€ Р Р†Р В°РЎРѓ Р С—Р С•Р С”Р В° Р Р…Р ВµРЎвЂљ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р в„– Р Т‘Р В»РЎРЏ РЎР‚Р ВµР Т‘Р В°Р С”РЎвЂљР С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С‘РЎРЏ.")
+        await message.answer("Список желаний пуст. Сначала добавьте что-нибудь через /add.")
         return
 
     builder = InlineKeyboardBuilder()
     for wish in sorted(wishes, key=lambda w: w.title.casefold()):
         builder.button(text=truncate(wish.title), callback_data=f"edit:{wish.id}")
     builder.adjust(1)
-    await message.answer("Р вЂ™РЎвЂ№Р В±Р ВµРЎР‚Р С‘РЎвЂљР Вµ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р Вµ Р Т‘Р В»РЎРЏ РЎР‚Р ВµР Т‘Р В°Р С”РЎвЂљР С‘РЎР‚Р С•Р Р†Р В°Р Р…Р С‘РЎРЏ:", reply_markup=builder.as_markup())
+    await message.answer("Выберите желание для редактирования:", reply_markup=builder.as_markup())
 
 
 @router.message(Command("delete"), StateFilter(UserSession.active))
@@ -796,14 +792,14 @@ async def cmd_delete(message: Message) -> None:
 
     wishes = list_wishes(message.from_user.id)
     if not wishes:
-        await message.answer("Р Р€ Р Р†Р В°РЎРѓ Р С—Р С•Р С”Р В° Р Р…Р ВµРЎвЂљ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р в„– Р Т‘Р В»РЎРЏ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С‘РЎРЏ.")
+        await message.answer("Список желаний пуст. Удалять пока нечего.")
         return
 
     builder = InlineKeyboardBuilder()
     for wish in sorted(wishes, key=lambda w: w.title.casefold()):
-        builder.button(text=f"РІСњРЉ {truncate(wish.title)}", callback_data=f"delete:{wish.id}")
+        builder.button(text=f"Удалить {truncate(wish.title)}", callback_data=f"delete:{wish.id}")
     builder.adjust(1)
-    await message.answer("Р вЂ™РЎвЂ№Р В±Р ВµРЎР‚Р С‘РЎвЂљР Вµ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р Вµ Р Т‘Р В»РЎРЏ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С‘РЎРЏ:", reply_markup=builder.as_markup())
+    await message.answer("Выберите желание, которое нужно удалить:", reply_markup=builder.as_markup())
 
 
 @router.message(Command("export"), StateFilter(UserSession.active))
@@ -813,14 +809,14 @@ async def cmd_export(message: Message) -> None:
 
     wishes = list_wishes(message.from_user.id)
     if not wishes:
-        await message.answer("Р вЂ™Р В°РЎв‚¬ РЎРѓР С—Р С‘РЎРѓР С•Р С” Р В¶Р ВµР В»Р В°Р Р…Р С‘Р в„– Р С—РЎС“РЎРѓРЎвЂљ. Р СњР ВµРЎвЂЎР ВµР С–Р С• РЎРЊР С”РЎРѓР С—Р С•РЎР‚РЎвЂљР С‘РЎР‚Р С•Р Р†Р В°РЎвЂљРЎРЉ.")
+        await message.answer("Нет желаний для экспорта. Добавьте хотя бы одно через /add.")
         return
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="СЂСџвЂњвЂћ TXT", callback_data="export:txt")
-    builder.button(text="СЂСџвЂњР‰ CSV", callback_data="export:csv")
+    builder.button(text="TXT", callback_data="export:txt")
+    builder.button(text="CSV", callback_data="export:csv")
     builder.adjust(2)
-    await message.answer("Р вЂ™РЎвЂ№Р В±Р ВµРЎР‚Р С‘РЎвЂљР Вµ РЎвЂћР С•РЎР‚Р СР В°РЎвЂљ РЎРЊР С”РЎРѓР С—Р С•РЎР‚РЎвЂљР В°:", reply_markup=builder.as_markup())
+    await message.answer("Выберите формат экспорта:", reply_markup=builder.as_markup())
 
 
 # ---------------------------------------------------------------------------
@@ -836,19 +832,19 @@ async def callback_edit(callback: CallbackQuery, state: FSMContext) -> None:
     wish_id = callback.data.split(":", 1)[1]
     wish = find_wish(callback.from_user.id, wish_id)
     if not wish:
-        await callback.answer("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р Р…Р В°Р в„–РЎвЂљР С‘ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р Вµ.", show_alert=True)
+        await callback.answer("Не удалось найти желание.", show_alert=True)
         return
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="Р СњР В°Р В·Р Р†Р В°Р Р…Р С‘Р Вµ", callback_data=f"edit_field:{wish_id}:title")
-    builder.button(text="Р РЋРЎРѓРЎвЂ№Р В»Р С”Р В°", callback_data=f"edit_field:{wish_id}:link")
-    builder.button(text="Р С™Р В°РЎвЂљР ВµР С–Р С•РЎР‚Р С‘РЎРЏ", callback_data=f"edit_field:{wish_id}:category")
-    builder.button(text="Р С›Р С—Р С‘РЎРѓР В°Р Р…Р С‘Р Вµ", callback_data=f"edit_field:{wish_id}:description")
-    builder.button(text="Р СџРЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ", callback_data=f"edit_field:{wish_id}:priority")
+    builder.button(text="Название", callback_data=f"edit_field:{wish_id}:title")
+    builder.button(text="Ссылка", callback_data=f"edit_field:{wish_id}:link")
+    builder.button(text="Категория", callback_data=f"edit_field:{wish_id}:category")
+    builder.button(text="Описание", callback_data=f"edit_field:{wish_id}:description")
+    builder.button(text="Приоритет", callback_data=f"edit_field:{wish_id}:priority")
     builder.adjust(2)
 
     await callback.message.answer(
-        f"Р В§РЎвЂљР С• РЎвЂ¦Р С•РЎвЂљР С‘РЎвЂљР Вµ Р С‘Р В·Р СР ВµР Р…Р С‘РЎвЂљРЎРЉ?\n\n{describe_wish_for_confirmation(wish)}",
+        f"Что изменить?\n\n{describe_wish_for_confirmation(wish)}",
         reply_markup=builder.as_markup(),
     )
     await callback.answer()
@@ -862,15 +858,15 @@ async def callback_edit_field(callback: CallbackQuery, state: FSMContext) -> Non
     _, wish_id, field = callback.data.split(":", 2)
     wish = find_wish(callback.from_user.id, wish_id)
     if not wish:
-        await callback.answer("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р Р…Р В°Р в„–РЎвЂљР С‘ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р Вµ.", show_alert=True)
+        await callback.answer("Не удалось найти желание.", show_alert=True)
         return
 
     prompts = {
-        "title": "Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р Р…Р С•Р Р†Р С•Р Вµ Р Р…Р В°Р В·Р Р†Р В°Р Р…Р С‘Р Вµ:",
-        "link": "Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р Р…Р С•Р Р†РЎС“РЎР‹ РЎРѓРЎРѓРЎвЂ№Р В»Р С”РЎС“ (Р С‘Р В»Р С‘ \"-\" Р ВµРЎРѓР В»Р С‘ РЎС“Р Т‘Р В°Р В»Р С‘РЎвЂљРЎРЉ):",
-        "category": "Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р Р…Р С•Р Р†РЎС“РЎР‹ Р С”Р В°РЎвЂљР ВµР С–Р С•РЎР‚Р С‘РЎР‹:",
-        "description": "Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р Р…Р С•Р Р†Р С•Р Вµ Р С•Р С—Р С‘РЎРѓР В°Р Р…Р С‘Р Вµ (Р С‘Р В»Р С‘ \"-\" Р ВµРЎРѓР В»Р С‘ РЎС“Р Т‘Р В°Р В»Р С‘РЎвЂљРЎРЉ):",
-        "priority": "Р вЂ™Р Р†Р ВµР Т‘Р С‘РЎвЂљР Вµ Р Р…Р С•Р Р†РЎвЂ№Р в„– Р С—РЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ (1-5):",
+        "title": "Введите новое название:",
+        "link": "Введите новую ссылку (или "-" если её нет):",
+        "category": "Введите новую категорию:",
+        "description": "Введите новое описание (или "-" если его нет):",
+        "priority": "Введите новый приоритет от 1 до 5:",
     }
     await state.set_state(EditWish.waiting_value)
     await state.update_data(wish_id=wish_id, field=field)
@@ -889,7 +885,7 @@ async def process_edit_value(message: Message, state: FSMContext) -> None:
     wish_id = data.get("wish_id")
     field = data.get("field")
     if not wish_id or not field:
-        await message.answer("Р В§РЎвЂљР С•-РЎвЂљР С• Р С—Р С•РЎв‚¬Р В»Р С• Р Р…Р Вµ РЎвЂљР В°Р С”. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р ВµРЎвЂ°РЎвЂ РЎР‚Р В°Р В· РЎвЂЎР ВµРЎР‚Р ВµР В· /edit.")
+        await message.answer("Сессия потеряна. Повторите команду /edit.")
         await state.clear()
         await state.set_state(UserSession.active)
         return
@@ -899,11 +895,11 @@ async def process_edit_value(message: Message, state: FSMContext) -> None:
 
     if field == "priority":
         if not new_value_raw.isdigit():
-            await message.answer("Р СџРЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ Р Т‘Р С•Р В»Р В¶Р ВµР Р… Р В±РЎвЂ№РЎвЂљРЎРЉ РЎвЂЎР С‘РЎРѓР В»Р С•Р С Р С•РЎвЂљ 1 Р Т‘Р С• 5. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р ВµРЎвЂ°РЎвЂ РЎР‚Р В°Р В·:")
+            await message.answer("Приоритет должен быть числом от 1 до 5. Попробуйте снова:")
             return
         priority = int(new_value_raw)
         if priority < 1 or priority > 5:
-            await message.answer("Р СџРЎР‚Р С‘Р С•РЎР‚Р С‘РЎвЂљР ВµРЎвЂљ Р Т‘Р С•Р В»Р В¶Р ВµР Р… Р В±РЎвЂ№РЎвЂљРЎРЉ Р Р† Р Т‘Р С‘Р В°Р С—Р В°Р В·Р С•Р Р…Р Вµ 1-5. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р ВµРЎвЂ°РЎвЂ РЎР‚Р В°Р В·:")
+            await message.answer("Приоритет должен быть в диапазоне от 1 до 5. Отправьте значение ещё раз:")
             return
         updated = await update_wish_field(user_id, wish_id, "priority", priority)
     else:
@@ -914,9 +910,9 @@ async def process_edit_value(message: Message, state: FSMContext) -> None:
         updated = await update_wish_field(user_id, wish_id, field, new_value)
 
     if not updated:
-        await message.answer("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С•Р В±Р Р…Р С•Р Р†Р С‘РЎвЂљРЎРЉ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р Вµ. Р СџР С•Р С—РЎР‚Р С•Р В±РЎС“Р в„–РЎвЂљР Вµ Р ВµРЎвЂ°РЎвЂ РЎР‚Р В°Р В· РЎвЂЎР ВµРЎР‚Р ВµР В· /edit.")
-    else:
-        await message.answer("РІСљвЂ¦ Р ВР В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р ВµР Р…РЎвЂ№.\n\n" + describe_wish_for_confirmation(updated))
+        await message.answer("Не удалось обновить желание. Попробуйте ещё раз через /edit.")
+        await message.answer("Не удалось обновить желание. Попробуйте ещё раз через /edit.")
+        await message.answer("Желание обновлено: \n\n" + describe_wish_for_confirmation(updated))
 
     await state.clear()
     await state.set_state(UserSession.active)
@@ -930,25 +926,24 @@ async def callback_delete(callback: CallbackQuery, state: FSMContext) -> None:
     wish_id = callback.data.split(":", 1)[1]
     wish = find_wish(callback.from_user.id, wish_id)
     if not wish:
-        await callback.answer("Р вЂ“Р ВµР В»Р В°Р Р…Р С‘Р Вµ Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…Р С•.", show_alert=True)
+        await callback.answer("Не удалось найти желание.", show_alert=True)
         return
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="Р вЂќР В°, РЎС“Р Т‘Р В°Р В»Р С‘РЎвЂљРЎРЉ", callback_data=f"delete_confirm:{wish_id}")
-    builder.button(text="Р С›РЎвЂљР СР ВµР Р…Р В°", callback_data="cancel")
+    builder.button(text="Да, удалить", callback_data=f"delete_confirm:{wish_id}")
+    builder.button(text="Отмена", callback_data="cancel")
     builder.adjust(2)
     await callback.message.answer(
-        f"Р Р€Р Т‘Р В°Р В»Р С‘РЎвЂљРЎРЉ РЎРЊРЎвЂљР С• Р В¶Р ВµР В»Р В°Р Р…Р С‘Р Вµ?\n\n{describe_wish_for_confirmation(wish)}",
+        f"Удалить это желание?\n\n{describe_wish_for_confirmation(wish)}",
         reply_markup=builder.as_markup(),
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "cancel")
 async def callback_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     if not await ensure_active_session_callback(callback, state):
         return
-    await callback.answer("Р С›РЎвЂљР СР ВµР Р…Р ВµР Р…Р С•.")
+    await callback.answer("Отменено.")
 
 
 @router.callback_query(F.data.startswith("delete_confirm:"))
@@ -959,10 +954,10 @@ async def callback_delete_confirm(callback: CallbackQuery, state: FSMContext) ->
     wish_id = callback.data.split(":", 1)[1]
     removed = await delete_wish(callback.from_user.id, wish_id)
     if removed:
-        await callback.message.answer("РІСњРЉ Р вЂ“Р ВµР В»Р В°Р Р…Р С‘Р Вµ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С•.")
+        await callback.message.answer("Желание удалено.")
         await callback.answer()
     else:
-        await callback.answer("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ РЎС“Р Т‘Р В°Р В»Р С‘РЎвЂљРЎРЉ Р В¶Р ВµР В»Р В°Р Р…Р С‘Р Вµ.", show_alert=True)
+        await callback.answer("Не удалось удалить желание.", show_alert=True)
 
 
 @router.callback_query(F.data.startswith("export:"))
@@ -981,11 +976,11 @@ async def callback_export(callback: CallbackQuery, state: FSMContext) -> None:
         content = compose_export_csv(wishes)
         file = BufferedInputFile(content.encode("utf-8"), filename="wishlist.csv")
     else:
-        await callback.answer("Р СњР ВµР С‘Р В·Р Р†Р ВµРЎРѓРЎвЂљР Р…РЎвЂ№Р в„– РЎвЂћР С•РЎР‚Р СР В°РЎвЂљ.", show_alert=True)
+        await callback.answer("Неизвестный формат.", show_alert=True)
         return
 
     await callback.message.answer_document(file)
-    await callback.answer("Р В­Р С”РЎРѓР С—Р С•РЎР‚РЎвЂљ Р С–Р С•РЎвЂљР С•Р Р†!")
+    await callback.answer("Экспорт завершён!")
 
 
 # ---------------------------------------------------------------------------
