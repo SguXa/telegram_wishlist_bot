@@ -1,7 +1,7 @@
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardRemove
 
 from bot.fsm import UserSession
 
@@ -14,12 +14,14 @@ async def cmd_logout(message: Message, state: FSMContext) -> None:
     await state.set_state(UserSession.logged_out)
 
     await message.answer(
-        "Вы вышли из аккаунта. Чтобы снова войти, используйте /login."
+        "Вы вышли из аккаунта. Чтобы снова войти, используйте /login.",
+        reply_markup=ReplyKeyboardRemove(),
     )
 
 
 @router.message(Command("logout"), StateFilter(UserSession.logged_out, None))
 async def cmd_logout_inactive(message: Message) -> None:
     await message.answer(
-        "Вы еще не авторизованы. Используйте /login."
+        "Вы еще не авторизованы. Используйте /login.",
+        reply_markup=ReplyKeyboardRemove(),
     )
