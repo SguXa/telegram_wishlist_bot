@@ -15,10 +15,10 @@ def build_list_actions_keyboard(wishes: list[Wish]) -> InlineKeyboardBuilder:
     for wish in wishes:
         builder.row(
             InlineKeyboardButton(
-                text=f"\u0420\u0435\u0434\u0430\u043a\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c {truncate(wish.title, 18)}",
+                text=f"Редактировать{truncate(wish.title, 18)}",
                 callback_data=f"edit:{wish.id}",
             ),
-            InlineKeyboardButton(text="\u0423\u0434\u0430\u043b\u0438\u0442\u044c", callback_data=f"delete:{wish.id}"),
+            InlineKeyboardButton(text="Удалить", callback_data=f"delete:{wish.id}"),
         )
     return builder
 

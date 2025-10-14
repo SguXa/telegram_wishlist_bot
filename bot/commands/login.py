@@ -34,9 +34,7 @@ async def cmd_login(message: Message, state: FSMContext) -> None:
         await state.clear()
         await state.set_state(UserSession.active)
         await message.answer(
-            "\u0410\u0432\u0442\u043e\u0440\u0438\u0437\u0430\u0446\u0438\u044f \u043f\u0440\u043e\u0448\u043b\u0430 \u0443\u0441\u043f\u0435\u0448\u043d\u043e! "
-            "\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435 \u043a\u043e\u043c\u0430\u043d\u0434\u044b \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b. "
-            "\u0418\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0439\u0442\u0435 /list \u0438\u043b\u0438 /help.",
+            "Авторизация прошла успешно! Основные команды доступны. Используйте /list или /help.",
             reply_markup=get_active_keyboard(),
         )
         return
@@ -45,9 +43,7 @@ async def cmd_login(message: Message, state: FSMContext) -> None:
     user_id_text = identifiers_to_try[0] if identifiers_to_try else "unknown"
     username_text = next((value for value in identifiers_to_try if value.startswith("@")), None)
     failure_lines = [
-        "\u0410\u0432\u0442\u043e\u0440\u0438\u0437\u0430\u0446\u0438\u044f \u043d\u0435 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d\u0430. "
-        "\u0423\u0431\u0435\u0434\u0438\u0442\u0435\u0441\u044c, \u0447\u0442\u043e \u0432\u0430\u0448 Telegram ID \u0438\u043b\u0438 username "
-        "\u0432\u043d\u0435\u0441\u0435\u043d\u044b \u0432 \u0441\u043f\u0438\u0441\u043e\u043a \u0434\u043e\u0441\u0442\u0443\u043f\u0430.",
+        "Авторизация не выполнена. Убедитесь, что ваш Telegram ID или username внесены в список доступа.",
         f"ID: {escape_html_text(user_id_text)}",
     ]
     if username_text:
@@ -61,8 +57,6 @@ async def handle_logged_out_message(message: Message) -> None:
         return
 
     await message.answer(
-        "\u0412\u044b \u0441\u0435\u0439\u0447\u0430\u0441 \u043d\u0435 \u0430\u0432\u0442\u043e\u0440\u0438\u0437\u043e\u0432\u0430\u043d\u044b "
-        "\u0434\u043b\u044f \u0440\u0430\u0431\u043e\u0442\u044b \u0441 \u0431\u043e\u0442\u043e\u043c. "
-        "\u0412\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u0435 /login, \u0447\u0442\u043e\u0431\u044b \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c.",
+        "Вы сейчас не авторизованы для работы с ботом. Выполните /login, чтобы продолжить.",
         reply_markup=get_logged_out_keyboard(),
     )

@@ -23,8 +23,8 @@ async def callback_export(callback: CallbackQuery, state: FSMContext) -> None:
         content = compose_export_csv(wishes)
         file = BufferedInputFile(content.encode("utf-8"), filename="wishlist.csv")
     else:
-        await callback.answer("\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u044b\u0439 \u0444\u043e\u0440\u043c\u0430\u0442 \u044d\u043a\u0441\u043f\u043e\u0440\u0442\u0430.", show_alert=True)
+        await callback.answer("Неизвестный формат экспорта.", show_alert=True)
         return
 
     await callback.message.answer_document(file)
-    await callback.answer("\u042d\u043a\u0441\u043f\u043e\u0440\u0442 \u0433\u043e\u0442\u043e\u0432!")
+    await callback.answer("Экспорт готов!")

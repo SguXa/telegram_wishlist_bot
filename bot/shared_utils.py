@@ -53,9 +53,8 @@ def is_authorized(user: Optional[User]) -> bool:
 async def ensure_authorized_message(message: Message) -> bool:
     if not is_authorized(message.from_user):
         await message.answer(
-            "\u0423 \u0432\u0430\u0441 \u043d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u0430 \u043a \u044d\u0442\u043e\u043c\u0443 \u0431\u043e\u0442\u0443. "
-            "\u041f\u043e\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u0430 "
-            "\u0434\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432\u0430\u0448 \u0438\u0434\u0435\u043d\u0442\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440."
+            "У вас нет доступа к этому боту. "
+            "Попросите администратора добавить ваш идентификатор."
         )
         return False
     return True
@@ -63,7 +62,7 @@ async def ensure_authorized_message(message: Message) -> bool:
 
 async def ensure_authorized_callback(callback: CallbackQuery) -> bool:
     if not is_authorized(callback.from_user):
-        await callback.answer("\u041d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u0430.", show_alert=True)
+        await callback.answer("Нет доступа.", show_alert=True)
         return False
     return True
 
@@ -75,9 +74,7 @@ async def ensure_active_session_callback(callback: CallbackQuery, state: FSMCont
     current_state = await state.get_state()
     if current_state != UserSession.active.state:
         await callback.answer(
-            "\u0421\u0435\u0430\u043d\u0441 \u043d\u0435 \u0430\u043a\u0442\u0438\u0432\u0435\u043d. "
-            "\u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u0435 /login, "
-            "\u0447\u0442\u043e\u0431\u044b \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c.",
+            "Сеанс не активен. Пожалуйста, выполните /login, чтобы продолжить.",
             show_alert=True,
         )
         return False

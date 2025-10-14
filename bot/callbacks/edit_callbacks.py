@@ -80,8 +80,7 @@ async def process_edit_value(message: Message, state: FSMContext) -> None:
     field = data.get("field")
     if not wish_id or not field:
         await message.answer(
-            "\u0422\u0435\u043a\u0443\u0449\u0435\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u043e. "
-            "\u0417\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 /edit \u0437\u0430\u043d\u043e\u0432\u043e."
+            "Текущее действие устарело. Запустите /edit заново."
         )
         await state.clear()
         await state.set_state(UserSession.active)
@@ -93,16 +92,13 @@ async def process_edit_value(message: Message, state: FSMContext) -> None:
     if field == "priority":
         if not new_value_raw.isdigit():
             await message.answer(
-                "\u041f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442 \u0434\u043e\u043b\u0436\u0435\u043d \u0431\u044b\u0442\u044c "
-                "\u0447\u0438\u0441\u043b\u043e\u043c \u043e\u0442 1 \u0434\u043e 5. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0435 \u0440\u0430\u0437."
+                "Приоритет должен быть числом от 1 до 5. Попробуйте еще раз."
             )
             return
         priority = int(new_value_raw)
         if priority < 1 or priority > 5:
             await message.answer(
-                "\u041f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442 \u0432\u044b\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044f "
-                "\u0432 \u0434\u0438\u0430\u043f\u0430\u0437\u043e\u043d\u0435 \u043e\u0442 1 \u0434\u043e 5. "
-                "\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0435 \u0440\u0430\u0437."
+                "Приоритет выбирается в диапазоне от 1 до 5. Попробуйте еще раз."
             )
             return
         updated = await storage.update_wish_field(user_id, wish_id, "priority", priority)
@@ -115,13 +111,11 @@ async def process_edit_value(message: Message, state: FSMContext) -> None:
 
     if not updated:
         await message.answer(
-            "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0436\u0435\u043b\u0430\u043d\u0438\u0435. "
-            "\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c /edit."
+            "Не удалось обновить желание. Попробуйте снова запустить /edit."
         )
     else:
         await message.answer(
-            "\u0413\u043e\u0442\u043e\u0432\u043e! \u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u043d\u0430\u044f \u0437\u0430\u043f\u0438\u0441\u044c:\n\n"
-            + describe_wish_for_confirmation(updated)
+            "Готово! Обновленная запись:\n\n" + describe_wish_for_confirmation(updated)
         )
 
     await state.clear()
