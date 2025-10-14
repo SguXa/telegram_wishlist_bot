@@ -22,22 +22,21 @@ async def callback_edit(callback: CallbackQuery, state: FSMContext) -> None:
     wish = storage.find_wish(callback.from_user.id, wish_id)
     if not wish:
         await callback.answer(
-            "\u0416\u0435\u043b\u0430\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e. "
-            "\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e, \u043e\u043d\u043e \u0431\u044b\u043b\u043e \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u043e \u0438\u043b\u0438 \u0443\u0434\u0430\u043b\u0435\u043d\u043e.",
+            "Желание не найдено. Возможно, оно было изменено или удалено.",
             show_alert=True,
         )
         return
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435", callback_data=f"edit_field:{wish_id}:title")
-    builder.button(text="\u0421\u0441\u044b\u043b\u043a\u0430", callback_data=f"edit_field:{wish_id}:link")
-    builder.button(text="\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f", callback_data=f"edit_field:{wish_id}:category")
-    builder.button(text="\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435", callback_data=f"edit_field:{wish_id}:description")
-    builder.button(text="\u041f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442", callback_data=f"edit_field:{wish_id}:priority")
+    builder.button(text="Название", callback_data=f"edit_field:{wish_id}:title")
+    builder.button(text="Ссылка", callback_data=f"edit_field:{wish_id}:link")
+    builder.button(text="Категория", callback_data=f"edit_field:{wish_id}:category")
+    builder.button(text="Описание", callback_data=f"edit_field:{wish_id}:description")
+    builder.button(text="Приоритет", callback_data=f"edit_field:{wish_id}:priority")
     builder.adjust(2)
 
     await callback.message.answer(
-        "\u0427\u0442\u043e \u043d\u0443\u0436\u043d\u043e \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c?\n\n"
+        "Что нужно изменить?\n\n"
         f"{describe_wish_for_confirmation(wish)}",
         reply_markup=builder.as_markup(),
     )
@@ -52,24 +51,24 @@ async def callback_edit_field(callback: CallbackQuery, state: FSMContext) -> Non
     wish = storage.find_wish(callback.from_user.id, wish_id)
     if not wish:
         await callback.answer(
-            "\u0416\u0435\u043b\u0430\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e. "
-            "\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e, \u043e\u043d\u043e \u0431\u044b\u043b\u043e \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u043e \u0438\u043b\u0438 \u0443\u0434\u0430\u043b\u0435\u043d\u043e.",
+            "Желание не найдено. Возможно, оно было изменено или удалено.",
             show_alert=True,
         )
         return
 
     prompts = {
-        "title": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435:",
-        "link": "\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u043e\u0432\u0443\u044e \u0441\u0441\u044b\u043b\u043a\u0443 (\u0438\u043b\u0438 \"-\" \u0435\u0441\u043b\u0438 \u0435\u0435 \u043d\u0435 \u0431\u0443\u0434\u0435\u0442):",
-        "category": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u0443\u044e \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044e:",
-        "description": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 (\u0438\u043b\u0438 \"-\" \u0435\u0441\u043b\u0438 \u0435\u0433\u043e \u043d\u0435 \u043d\u0443\u0436\u043d\u043e):",
-        "priority": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442 \u043e\u0442 1 \u0434\u043e 5:",
+        "title": "Введите новое название:",
+        "link": "Укажите новую ссылку (или \"-\" если ее не будет):",
+        "category": "Введите новую категорию:",
+        "description": "Введите новое описание (или \"-\" если его не нужно):",
+        "priority": "Введите новый приоритет от 1 до 5:",
     }
 
     await state.set_state(EditWish.waiting_value)
     await state.update_data(wish_id=wish_id, field=field)
     await callback.message.answer(prompts[field])
     await callback.answer()
+
 
 
 @router.message(EditWish.waiting_value)
