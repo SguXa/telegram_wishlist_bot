@@ -107,6 +107,7 @@ class Storage:
             category=raw.get("category", ""),
             description=raw.get("description", ""),
             priority=int(raw.get("priority", 0)),
+            photo_file_id=raw.get("photo_file_id", ""),
         )
 
     @staticmethod
@@ -118,5 +119,5 @@ class Storage:
             "category": wish.category,
             "description": wish.description,
             "priority": wish.priority,
+            "photo_file_id": wish.photo_file_id,
         }
-

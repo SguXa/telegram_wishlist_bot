@@ -2,11 +2,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class AddWish(StatesGroup):
-    title = State()
-    link = State()
-    category = State()
-    description = State()
-    priority = State()
+    waiting_input = State()
 
 
 class EditWish(StatesGroup):

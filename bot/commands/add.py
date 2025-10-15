@@ -1,3 +1,4 @@
+import re
 from uuid import uuid4
 
 from aiogram import Router
@@ -11,84 +12,82 @@ from core.models import Wish
 
 router = Router()
 
+_URL_PATTERN = re.compile(r"(?i)\bhttps?://\S+")
+_TRAILING_PUNCTUATION = ".,!?:;\"')]>}"
+_DEFAULT_PRIORITY = 3
+_UNTITLED_PHOTO_TITLE = "Photo wish"
+
+
+def _extract_title_and_link(text: str) -> tuple[str, str]:
+    match = _URL_PATTERN.search(text)
+    if not match:
+        return text, ""
+
+    raw_link = match.group(0)
+    link = raw_link.rstrip(_TRAILING_PUNCTUATION)
+    before = text[: match.start()].strip()
+    after = text[match.end() :].strip()
+
+    if before:
+        title = before
+    elif after:
+        title = after
+    else:
+        title = link
+
+    return title, link
+
+
+def _is_cancel_command(text: str) -> bool:
+    return text in {"/cancel", "cancel", "stop"}
+
 
 @router.message(Command("add"), StateFilter(UserSession.active))
 @ensure_authorized
 async def cmd_add(message: Message, state: FSMContext) -> None:
-    await state.set_state(AddWish.title)
-    await message.answer("Введите название желания:")
+    await state.set_state(AddWish.waiting_input)
+    await message.answer("Send a wish title or link. Use /cancel to abort.")
 
 
-@router.message(AddWish.title)
+@router.message(AddWish.waiting_input)
 @ensure_authorized(reset_state=True)
-async def add_title(message: Message, state: FSMContext) -> None:
-    title = (message.text or "").strip()
-    if not title:
-        await message.answer(
-            "Название не может быть пустым. Попробуйте еще раз."
-        )
-        return
-    await state.update_data(title=title)
-    await state.set_state(AddWish.link)
-    await message.answer("Укажите ссылку (или \"-\" если ее нет):")
+async def add_wish_simple(message: Message, state: FSMContext) -> None:
+    photo_file_id = message.photo[-1].file_id if message.photo else ""
+    raw_text = message.caption if photo_file_id else message.text
+    text = (raw_text or "").strip()
 
-
-@router.message(AddWish.link)
-@ensure_authorized(reset_state=True)
-async def add_link(message: Message, state: FSMContext) -> None:
-    raw = (message.text or "").strip()
-    link = "" if raw in {"", "-"} else raw
-    await state.update_data(link=link)
-    await state.set_state(AddWish.category)
-    await message.answer("Укажите категорию (или \"-\" если ее нет):")
-
-
-@router.message(AddWish.category)
-@ensure_authorized(reset_state=True)
-async def add_category(message: Message, state: FSMContext) -> None:
-    category = (message.text or "").strip()
-    await state.update_data(category=category if category != "-" else "")
-    await state.set_state(AddWish.description)
-    await message.answer("Добавьте описание (или \"-\" если его нет):")
-
-
-@router.message(AddWish.description)
-@ensure_authorized(reset_state=True)
-async def add_description(message: Message, state: FSMContext) -> None:
-    raw = (message.text or "").strip()
-    description = "" if raw in {"", "-"} else raw
-    await state.update_data(description=description)
-    await state.set_state(AddWish.priority)
-    await message.answer("Укажите приоритет от 1 до 5:")
-
-
-@router.message(AddWish.priority)
-@ensure_authorized(reset_state=True)
-async def add_priority(message: Message, state: FSMContext) -> None:
-    raw = (message.text or "").strip()
-    if not raw.isdigit():
-        await message.answer(
-            "Приоритет должен быть числом от 1 до 5. Попробуйте еще раз:"
-        )
-        return
-    priority = int(raw)
-    if priority < 1 or priority > 5:
-        await message.answer(
-            "Приоритет выбирается в диапазоне от 1 до 5. Попробуйте еще раз:"
-        )
+    if text and _is_cancel_command(text.lower()):
+        await state.clear()
+        await state.set_state(UserSession.active)
+        await message.answer("Got it, cancelled.")
         return
 
-    state_data = await state.get_data()
+    title = ""
+    link = ""
+    if text:
+        title, link = _extract_title_and_link(text)
+
+    if not title and not link:
+        if photo_file_id:
+            title = _UNTITLED_PHOTO_TITLE
+        else:
+            await message.answer("Please send a wish title or a link:")
+            return
+
+    if not title and not link:
+        title = _UNTITLED_PHOTO_TITLE
+
     wish = Wish(
         id=uuid4().hex,
-        title=state_data["title"],
-        link=state_data.get("link", ""),
-        category=state_data.get("category", ""),
-        description=state_data.get("description", ""),
-        priority=priority,
+        title=title or link,
+        link=link,
+        category="",
+        description="",
+        priority=_DEFAULT_PRIORITY,
+        photo_file_id=photo_file_id,
     )
+
     await get_storage().add_wish(message.from_user.id, wish)
     await state.clear()
     await state.set_state(UserSession.active)
-    await message.answer("Желание добавлено!")
-    await message.answer("Посмотрите все желания через /list.")
+    await message.answer("Saved! Check /list to see everything.")

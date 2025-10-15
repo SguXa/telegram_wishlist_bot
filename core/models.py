@@ -10,8 +10,8 @@ class Wish:
     category: str
     description: str
     priority: int
+    photo_file_id: str = ""
 
 
 Store = Dict[str, Any]
 WishList = List[Wish]
-

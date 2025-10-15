@@ -110,6 +110,7 @@ def compose_export_csv(wishes: List[Wish]) -> str:
           "Категория",
           "Описание",
           "Приоритет",
+          "ID фото",
         ]
     )
     for wish in wishes:
@@ -120,6 +121,7 @@ def compose_export_csv(wishes: List[Wish]) -> str:
                 wish.category,
                 wish.description,
                 wish.priority,
+                wish.photo_file_id,
             ]
         )
     return output.getvalue()

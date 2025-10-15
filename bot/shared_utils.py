@@ -135,14 +135,17 @@ async def send_wish_list(message: Message, wishes: list[Wish], empty_text: str) 
         return
 
     for category, items in sort_wishes_for_display(wishes):
-        emoji = category_to_emoji(category if category != DEFAULT_CATEGORY_TITLE else "")
-        text_lines = [f"{emoji} {escape_html_text(category)}"]
         for wish in items:
-            text_lines.append(build_wish_block(wish))
-            text_lines.append("")
-        payload = "\n".join(text_lines).strip()
-        keyboard = build_list_actions_keyboard(items)
-        await message.answer(payload, reply_markup=keyboard.as_markup())
+            caption = describe_wish_for_confirmation(wish)
+            keyboard = build_list_actions_keyboard([wish])
+            if wish.photo_file_id:
+                await message.answer_photo(
+                    wish.photo_file_id,
+                    caption=caption,
+                    reply_markup=keyboard.as_markup(),
+                )
+            else:
+                await message.answer(caption, reply_markup=keyboard.as_markup())
 
 
 def select_other_user(current_user_id: int) -> Optional[int]:
