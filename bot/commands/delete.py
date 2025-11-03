@@ -19,5 +19,5 @@ async def cmd_delete(message: Message, state: FSMContext) -> None:
         await message.answer(EMPTY_PROMPT, reply_markup=main_menu_keyboard())
         return
 
-    await message.answer("❌ Выберите, что удалить")
+    await message.answer("❌ Выберите желание для удаления")
     await send_wish_list(message, wishes, EMPTY_PROMPT)

@@ -62,5 +62,9 @@ async def callback_delete_confirm(callback: CallbackQuery, state: FSMContext) ->
 
     await callback.message.answer("🗑️ Удалено", reply_markup=main_menu_keyboard())
     wishes = await storage.list_wishes(callback.from_user.id)
-    await send_wish_list(callback.message, wishes, "📭 Список пуст. Нажмите «➕ Добавить».")
+    await send_wish_list(
+        callback.message,
+        wishes,
+        "📭 Список пуст. Нажмите «➕ Добавить».",
+    )
     await callback.answer()

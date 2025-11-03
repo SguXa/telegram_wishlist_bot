@@ -282,16 +282,25 @@ async def _send_photo_with_optional_text(
         await _send_text(message, caption)
 
 
-async def send_wish_list(message: Message, wishes: list[Wish], empty_text: str) -> None:
+async def send_wish_list(
+    message: Message,
+    wishes: list[Wish],
+    empty_text: str,
+    *,
+    show_actions: bool = True,
+    title: str = "📋 Ваш список",
+) -> None:
     if not wishes:
         await message.answer(empty_text, reply_markup=main_menu_keyboard())
         return
 
-    await message.answer("📋 Ваш список:", reply_markup=main_menu_keyboard())
+    await message.answer(title, reply_markup=main_menu_keyboard())
     for category, items in sort_wishes_for_display(wishes):
         for wish in items:
             caption = describe_wish_for_confirmation(wish)
-            keyboard_markup = build_wish_actions_keyboard(int(wish.id)) if wish.id is not None else None
+            keyboard_markup = (
+                build_wish_actions_keyboard(int(wish.id)) if show_actions and wish.id is not None else None
+            )
             if wish.image_url or wish.image:
                 await _send_photo_with_optional_text(message, wish, caption, keyboard_markup)
             else:

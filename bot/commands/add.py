@@ -11,7 +11,7 @@ from aiogram.types import Message, PhotoSize
 from bot.fsm import AddWish, UserSession
 from bot.shared_utils import ensure_authorized, get_storage
 from core.models import Wish
-from ui.keyboards import cancel_input_keyboard, main_menu_keyboard
+from ui.keyboards import ADD_BUTTON, cancel_input_keyboard, main_menu_keyboard
 
 router = Router()
 
@@ -81,7 +81,7 @@ async def _cancel_addition(message: Message, state: FSMContext) -> None:
 
 
 @router.message(Command("add"))
-@router.message(F.text == "➕ Добавить")
+@router.message(F.text == ADD_BUTTON)
 @ensure_authorized(require_session=True)
 async def cmd_add(message: Message, state: FSMContext) -> None:
     await state.set_state(AddWish.waiting_input)

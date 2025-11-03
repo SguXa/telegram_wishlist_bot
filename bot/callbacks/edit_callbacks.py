@@ -112,7 +112,11 @@ async def _download_photo_if_needed(message: Message, photo: PhotoSize) -> bytes
 async def handle_back_to_list(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
     wishes = await storage.list_wishes(callback.from_user.id)
-    await send_wish_list(callback.message, wishes, "📭 Список пуст. Нажмите «➕ Добавить».")
+    await send_wish_list(
+        callback.message,
+        wishes,
+        "📭 Список пуст. Нажмите «➕ Добавить».",
+    )
     await callback.answer()
 
 
@@ -134,7 +138,10 @@ async def handle_edit_callback(callback: CallbackQuery, state: FSMContext) -> No
         return
 
     if parsed.action == "priority":
-        await callback.message.answer("⭐ Выберите приоритет:", reply_markup=build_priority_menu(parsed.item_id))
+        await callback.message.answer(
+            "⭐ Выберите приоритет",
+            reply_markup=build_priority_menu(parsed.item_id),
+        )
         await callback.answer()
         return
 
@@ -192,7 +199,7 @@ async def handle_edit_callback(callback: CallbackQuery, state: FSMContext) -> No
             reply_markup=cancel_input_keyboard("Отправьте фото"),
         )
         await callback.message.answer(
-            "Вы можете убрать фото кнопкой ниже.",
+            "🗑️ Можно убрать фото кнопкой ниже.",
             reply_markup=build_photo_prompt_menu(parsed.item_id),
         )
         await callback.answer()
@@ -201,7 +208,7 @@ async def handle_edit_callback(callback: CallbackQuery, state: FSMContext) -> No
     if parsed.action == "photo|clear":
         updated = await get_storage().clear_wish_photo(callback.from_user.id, parsed.item_id)
         if updated is None:
-            await callback.answer("⚠️ Не удалось удалить фото", show_alert=True)
+            await callback.answer("⚠️ Не удалось обновить", show_alert=True)
             return
         await callback.message.answer("🗑️ Фото убрано", reply_markup=main_menu_keyboard())
         await _show_edit_card(callback.message, updated)

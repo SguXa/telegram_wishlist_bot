@@ -4,12 +4,16 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from core.formatting import escape_html_text
 from core.models import Wish
 
-MAIN_MENU_BUTTONS = ("📋 Мой список", "➕ Добавить", "⚙️ Настройки")
+MY_LIST_BUTTON = "📋 Мой список"
+ADD_BUTTON = "➕ Добавить"
+SETTINGS_BUTTON = "⚙️ Настройки"
+PARTNER_LIST_BUTTON = "💞 Список партнёра"
 
 
 def main_menu_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
-        [KeyboardButton(text=MAIN_MENU_BUTTONS[0]), KeyboardButton(text=MAIN_MENU_BUTTONS[1]), KeyboardButton(text=MAIN_MENU_BUTTONS[2])],
+        [KeyboardButton(text=MY_LIST_BUTTON), KeyboardButton(text=ADD_BUTTON)],
+        [KeyboardButton(text=PARTNER_LIST_BUTTON), KeyboardButton(text=SETTINGS_BUTTON)],
     ]
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
