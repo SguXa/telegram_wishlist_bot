@@ -2,9 +2,9 @@ import csv
 import io
 from collections import defaultdict
 from html import escape as html_escape
-from typing import Awaitable, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
-from aiogram.types import InputFile
+from aiogram.types import InputFile, Message
 
 from core.models import Wish
 
@@ -129,7 +129,7 @@ def compose_export_csv(wishes: List[Wish]) -> str:
     return output.getvalue()
 
 
-def send_wish_list(message: Message, wishes: List[Wish], footer: str) -> Awaitable[None]:
+async def send_wish_list(message: Message, wishes: List[Wish], footer: str) -> None:
     for wish in wishes:
         if wish.image_url:
             await message.answer_photo(photo=wish.image_url, caption=build_wish_block(wish))
@@ -137,3 +137,5 @@ def send_wish_list(message: Message, wishes: List[Wish], footer: str) -> Awaitab
             await message.answer_photo(photo=InputFile(wish.image), caption=build_wish_block(wish))
         else:
             await message.answer(build_wish_block(wish))
+    if footer:
+        await message.answer(footer)
