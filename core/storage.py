@@ -75,3 +75,27 @@ class Storage:
                     photo_file_id=row['photo_file_id']
                 )
             return None
+
+    async def update_wish_field(self, user_id: int, wish_id: int, field: str, value: str | int) -> Wish | None:
+        """
+        Обновить указанное поле желания.
+
+        Args:
+            user_id (int): Идентификатор пользователя.
+            wish_id (int): Идентификатор желания.
+            field (str): Поле для обновления.
+            value (str | int): Новое значение поля.
+
+        Returns:
+            Optional[Wish]: Обновленное желание или None, если обновление не удалось.
+        """
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                f"""
+                UPDATE wishes
+                SET {field} = $1
+                WHERE user_id = $2 AND id = $3
+                """,
+                value, user_id, wish_id
+            )
+            return await self.find_wish(user_id, wish_id)
