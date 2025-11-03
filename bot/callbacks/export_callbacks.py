@@ -14,7 +14,7 @@ async def callback_export(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
     format_name = callback.data.split(":", 1)[1]
     user_id = callback.from_user.id
-    wishes = storage.list_wishes(user_id)
+    wishes = await storage.list_wishes(user_id)
 
     if format_name == "txt":
         content = compose_export_txt(wishes)
