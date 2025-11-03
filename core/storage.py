@@ -1,11 +1,6 @@
-import asyncio
 import logging
-from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional
-
 import asyncpg
-
-from core.models import Store, Wish
+from core.models import Wish
 
 
 class Storage:
@@ -17,9 +12,13 @@ class Storage:
             rows = await conn.fetch("SELECT * FROM wishes WHERE user_id=$1 ORDER BY category, priority DESC", user_id)
             return rows
 
-    async def add_wish(self, user_id: int, title: str, link: str = None, category: str = None, description: str = None, priority: int = None):
-        async with self._pool.acquire() as conn:
-            await conn.execute(
-                "INSERT INTO wishes (user_id, title, link, category, description, priority) VALUES ($1, $2, $3, $4, $5, $6)",
-                user_id, title, link, category, description, priority
-            )
+    async def add_wish(self, user_id: int, wish: Wish):
+        try:
+            async with self._pool.acquire() as conn:
+                await conn.execute(
+                    "INSERT INTO wishes (user_id, title, link, category, description, priority) VALUES ($1, $2, $3, $4, $5, $6)",
+                    user_id, wish.title, wish.link, wish.category, wish.description, wish.priority
+                )
+        except asyncpg.PostgresError as e:
+            logging.error(f"Failed to add wish: {e}")
+            raise
