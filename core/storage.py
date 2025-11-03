@@ -43,3 +43,35 @@ class Storage:
         except asyncpg.PostgresError as e:
             logging.error(f"Failed to add wish for user {user_id}: {e}")
             raise
+
+    async def find_wish(self, user_id: int, wish_id: int) -> Wish | None:
+        """
+        Найти желание по идентификатору пользователя и идентификатору желания.
+
+        Args:
+            user_id (int): Идентификатор пользователя.
+            wish_id (int): Идентификатор желания.
+
+        Returns:
+            Optional[Wish]: Найденное желание или None, если не найдено.
+        """
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT id, title, link, category, description, priority, photo_file_id
+                FROM wishes
+                WHERE user_id=$1 AND id=$2
+                """,
+                user_id, wish_id
+            )
+            if row:
+                return Wish(
+                    id=row['id'],
+                    title=row['title'],
+                    link=row['link'],
+                    category=row['category'],
+                    description=row['description'],
+                    priority=row['priority'],
+                    photo_file_id=row['photo_file_id']
+                )
+            return None
