@@ -11,7 +11,7 @@ router = Router()
 @router.message(Command("list"), StateFilter(UserSession.active))
 @ensure_authorized
 async def cmd_list(message: Message) -> None:
-    wishes = get_storage().list_wishes(message.from_user.id)
+    wishes = await get_storage().list_wishes(message.from_user.id)
     await send_wish_list(
         message,
         wishes,
