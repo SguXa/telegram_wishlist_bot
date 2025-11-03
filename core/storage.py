@@ -100,3 +100,24 @@ class Storage:
                 value, user_id, wish_id
             )
             return await self.find_wish(user_id, wish_id)
+
+    async def delete_wish(self, user_id: int, wish_id: int) -> bool:
+        """
+        Удалить желание по идентификатору пользователя и идентификатору желания.
+
+        Args:
+            user_id (int): Идентификатор пользователя.
+            wish_id (int): Идентификатор желания.
+
+        Returns:
+            bool: True, если желание было удалено, иначе False.
+        """
+        async with self._pool.acquire() as conn:
+            result = await conn.execute(
+                """
+                DELETE FROM wishes
+                WHERE user_id = $1 AND id = $2
+                """,
+                user_id, wish_id
+            )
+            return result == "DELETE 1"
