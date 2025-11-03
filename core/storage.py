@@ -9,7 +9,15 @@ class Storage:
 
     async def list_wishes(self, user_id: int) -> list[Wish]:
         async with self._pool.acquire() as conn:
-            rows = await conn.fetch("SELECT title, link, category, description, priority FROM wishes WHERE user_id=$1 ORDER BY category, priority DESC", user_id)
+            rows = await conn.fetch(
+                """
+                SELECT title, link, category, description, priority, photo_file_id
+                FROM wishes
+                WHERE user_id=$1
+                ORDER BY category, priority DESC
+                """,
+                user_id
+            )
             return [Wish(*row) for row in rows]
 
     async def add_wish(self, user_id: int, wish: Wish) -> None:
