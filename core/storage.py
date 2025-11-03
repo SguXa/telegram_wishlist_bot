@@ -7,6 +7,56 @@ class Storage:
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
 
+    async def ensure_session_schema(self) -> None:
+        """Ensure the auxiliary table for user session tracking exists."""
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    user_id BIGINT PRIMARY KEY,
+                    is_active BOOLEAN NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+
+    async def set_session_state(self, user_id: int, is_active: bool) -> None:
+        """Persist the desired session state for a given user."""
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO user_sessions (user_id, is_active, updated_at)
+                VALUES ($1, $2, NOW())
+                ON CONFLICT (user_id)
+                DO UPDATE
+                SET is_active = EXCLUDED.is_active,
+                    updated_at = NOW()
+                """,
+                user_id,
+                is_active,
+            )
+
+    async def mark_session_active(self, user_id: int) -> None:
+        await self.set_session_state(user_id, True)
+
+    async def mark_session_inactive(self, user_id: int) -> None:
+        await self.set_session_state(user_id, False)
+
+    async def is_session_active(self, user_id: int) -> bool:
+        """Return True when a persisted session token exists for the user."""
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT is_active
+                FROM user_sessions
+                WHERE user_id = $1
+                """,
+                user_id,
+            )
+            if row is None:
+                return False
+            return bool(row["is_active"])
+
     async def list_wishes(self, user_id: int) -> list[Wish]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(

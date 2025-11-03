@@ -1,18 +1,18 @@
 from aiogram import Router
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.fsm import UserSession
 from bot.keyboards import truncate
 from bot.shared_utils import ensure_authorized, get_storage
 
 router = Router()
 
 
-@router.message(Command("edit"), StateFilter(UserSession.active))
-@ensure_authorized
-async def cmd_edit(message: Message) -> None:
+@router.message(Command("edit"))
+@ensure_authorized(require_session=True)
+async def cmd_edit(message: Message, state: FSMContext) -> None:
     wishes = await get_storage().list_wishes(message.from_user.id)
     if not wishes:
         await message.answer(

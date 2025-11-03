@@ -9,6 +9,7 @@ from aiogram.exceptions import TelegramNetworkError
 
 from bot.fsm import UserSession
 from bot.keyboards import get_active_keyboard, get_logged_out_keyboard
+from bot.shared_utils import get_storage
 from core.config import AUTHORIZED_IDENTIFIERS, canonicalize_identifier
 from core.formatting import escape_html_text
 
@@ -36,6 +37,8 @@ async def cmd_login(message: Message, state: FSMContext) -> None:
         if matched_identifier:
             await state.clear()
             await state.set_state(UserSession.active)
+            if user:
+                await get_storage().mark_session_active(user.id)
             await message.answer(
                 "Авторизация прошла успешно! Основные команды доступны. Используйте /list или /help.",
                 reply_markup=get_active_keyboard(),
@@ -43,6 +46,8 @@ async def cmd_login(message: Message, state: FSMContext) -> None:
             return
 
         await state.set_state(UserSession.logged_out)
+        if user:
+            await get_storage().mark_session_inactive(user.id)
         user_id_text = identifiers_to_try[0] if identifiers_to_try else "unknown"
         username_text = next((value for value in identifiers_to_try if value.startswith("@")), None)
         failure_lines = [

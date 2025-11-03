@@ -1,4 +1,5 @@
 import re
+from io import BytesIO
 from typing import Optional
 from uuid import uuid4
 
@@ -14,7 +15,7 @@ from core.models import Wish
 router = Router()
 
 _URL_PATTERN = re.compile(r"(?i)\bhttps?://\S+")
-_TRAILING_PUNCTUATION = ".,!?:;"')]>}"
+_TRAILING_PUNCTUATION = ".,!?:;\"')]>}"
 _DEFAULT_PRIORITY = 3
 _UNTITLED_PHOTO_TITLE = "Photo wish"
 
@@ -48,8 +49,8 @@ def _is_cancel_command(text: Optional[str]) -> bool:
     return text.strip().lower() in {"/cancel", "cancel", "stop"}
 
 
-@router.message(Command("add"), StateFilter(UserSession.active))
-@ensure_authorized
+@router.message(Command("add"))
+@ensure_authorized(require_session=True)
 async def cmd_add(message: Message, state: FSMContext) -> None:
     await state.set_state(AddWish.waiting_input)
     await message.answer("Send a wish title or link. Use /cancel to abort.")
@@ -72,8 +73,14 @@ async def process_add_input(message: Message, state: FSMContext) -> None:
     if message.photo:
         largest_photo: PhotoSize = message.photo[-1]
         image_url = largest_photo.file_id
-        if largest_photo.file_size and largest_photo.file_size <= 10 * 1024 * 1024:
-            image = await largest_photo.download(destination=bytes)
+        if (
+            largest_photo.file_size
+            and largest_photo.file_size <= 10 * 1024 * 1024
+            and message.bot is not None
+        ):
+            buffer = BytesIO()
+            await message.bot.download(largest_photo, destination=buffer)
+            image = buffer.getvalue()
 
     if not title:
         title = _UNTITLED_PHOTO_TITLE if message.photo else "Untitled wish"

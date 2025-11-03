@@ -1,16 +1,16 @@
 from aiogram import Router
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from bot.fsm import UserSession
 from bot.shared_utils import ensure_authorized
 
 router = Router()
 
 
-@router.message(Command("help"), StateFilter(UserSession.active))
-@ensure_authorized
-async def cmd_help(message: Message) -> None:
+@router.message(Command("help"))
+@ensure_authorized(require_session=True)
+async def cmd_help(message: Message, state: FSMContext) -> None:
     help_text = (
         "Доступные команды:\n"
 "/add - добавить желание в список.\n"

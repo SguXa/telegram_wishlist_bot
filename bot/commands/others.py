@@ -1,16 +1,16 @@
 from aiogram import Router
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from bot.fsm import UserSession
 from bot.shared_utils import ensure_authorized, get_storage, select_other_user, send_wish_list
 
 router = Router()
 
 
-@router.message(Command("others"), StateFilter(UserSession.active))
-@ensure_authorized
-async def cmd_others(message: Message) -> None:
+@router.message(Command("others"))
+@ensure_authorized(require_session=True)
+async def cmd_others(message: Message, state: FSMContext) -> None:
     other_id = select_other_user(message.from_user.id)
     if other_id is None:
         await message.answer(

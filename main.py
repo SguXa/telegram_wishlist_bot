@@ -42,6 +42,7 @@ async def main() -> None:
     pool = await create_pool()
     storage = Storage(pool)
     try:
+        await storage.ensure_session_schema()
         register_routes(dp, storage)
         await dp.start_polling(bot)
     finally:

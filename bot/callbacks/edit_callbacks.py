@@ -74,7 +74,7 @@ async def callback_edit_field(callback: CallbackQuery, state: FSMContext) -> Non
 
 
 @router.message(EditWish.waiting_value)
-@ensure_authorized(reset_state=True)
+@ensure_authorized(reset_state=True, require_session=True)
 async def process_edit_value(message: Message, state: FSMContext) -> None:
     storage = get_storage()
     data = await state.get_data()
