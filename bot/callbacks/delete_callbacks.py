@@ -1,9 +1,10 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.shared_utils import describe_wish_for_confirmation, ensure_active_session, get_storage
+from bot.shared_utils import describe_wish_for_confirmation, ensure_active_session, get_storage, send_wish_list
+from ui.keyboards import main_menu_keyboard
 
 router = Router()
 
@@ -12,50 +13,54 @@ router = Router()
 @ensure_active_session
 async def callback_delete(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
-    wish_id = callback.data.split(":", 1)[1]
-    wish_id = int(wish_id)  # Приведение wish_id к целому числу
-    wish = await storage.find_wish(callback.from_user.id, wish_id)  # Добавлено await
+    payload = callback.data.split(":", 1)[1]
+    try:
+        wish_id = int(payload)
+    except ValueError:
+        await callback.answer("⚠️ Некорректный идентификатор", show_alert=True)
+        return
+
+    wish = await storage.find_wish(callback.from_user.id, wish_id)
     if not wish:
-        await callback.answer(
-            "Желание не найдено. Возможно, оно уже удалено.",
-            show_alert=True,
-        )
+        await callback.answer("⚠️ Элемент не найден", show_alert=True)
         return
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="Да, удалить", callback_data=f"delete_confirm:{wish_id}")
-    builder.button(text="Отмена", callback_data="cancel")
-    builder.adjust(2)
+    builder.row(
+        InlineKeyboardButton(text="✅ Удалить", callback_data=f"delete_confirm:{wish_id}"),
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="cancel"),
+    )
+
     await callback.message.answer(
-        "Удалить это желание?\n\n"
-        f"{describe_wish_for_confirmation(wish)}",
+        "❌ Удалить это желание?\n\n" f"{describe_wish_for_confirmation(wish)}",
         reply_markup=builder.as_markup(),
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data == "cancel")
 @ensure_active_session
 async def callback_cancel(callback: CallbackQuery, state: FSMContext) -> None:
-    await callback.answer("Отменено.")
+    await callback.answer("↩️ Отмена")
 
 
 @router.callback_query(F.data.startswith("delete_confirm:"))
 @ensure_active_session
 async def callback_delete_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
-    wish_id_raw = callback.data.split(":", 1)[1]
+    payload = callback.data.split(":", 1)[1]
     try:
-        wish_id = int(wish_id_raw)
+        wish_id = int(payload)
     except ValueError:
-        await callback.answer("Некорректный идентификатор желания.", show_alert=True)
+        await callback.answer("⚠️ Некорректный идентификатор", show_alert=True)
         return
 
     removed = await storage.delete_wish(callback.from_user.id, wish_id)
-    if removed:
-        await callback.message.answer("Желание удалено.")
-        await callback.answer()
-    else:
-        await callback.answer(
-            "Не получилось удалить желание. Попробуйте еще раз.",
-            show_alert=True,
-        )
+    if not removed:
+        await callback.answer("⚠️ Не удалось удалить", show_alert=True)
+        return
+
+    await callback.message.answer("🗑️ Удалено", reply_markup=main_menu_keyboard())
+    wishes = await storage.list_wishes(callback.from_user.id)
+    await send_wish_list(callback.message, wishes, "📭 Список пуст. Нажмите «➕ Добавить».")
+    await callback.answer()

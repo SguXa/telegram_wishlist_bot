@@ -11,21 +11,19 @@ from aiogram.types import CallbackQuery, Message, User
 from aiogram.types.input_file import BufferedInputFile
 
 from bot.fsm import UserSession
-from bot.keyboards import build_list_actions_keyboard
 from core.config import (
     AUTHORIZED_IDENTIFIERS,
     AUTHORIZED_NUMERIC_IDS,
     canonicalize_identifier,
 )
-from core.formatting import (
-    DEFAULT_CATEGORY_TITLE,
-    build_wish_block,
-    category_to_emoji,
-    escape_html_text,
-    sort_wishes_for_display,
-)
+from core.formatting import DEFAULT_CATEGORY_TITLE, category_to_emoji, escape_html_text, sort_wishes_for_display
 from core.models import Wish
 from core.storage import Storage
+from ui.keyboards import (
+    build_wish_actions_keyboard,
+    build_wish_card,
+    main_menu_keyboard,
+)
 
 _storage: Optional[Storage] = None
 
@@ -183,7 +181,7 @@ def _extract_state(args: tuple[Any, ...], kwargs: dict[str, Any]) -> Optional[FS
 def describe_wish_for_confirmation(wish: Wish) -> str:
     emoji = category_to_emoji(wish.category)
     category = escape_html_text(wish.category or DEFAULT_CATEGORY_TITLE)
-    return f"{emoji} {category}\n{build_wish_block(wish)}"
+    return f"{emoji} {category}\n{build_wish_card(wish)}"
 
 
 MAX_CAPTION_LENGTH = 1024
@@ -286,13 +284,14 @@ async def _send_photo_with_optional_text(
 
 async def send_wish_list(message: Message, wishes: list[Wish], empty_text: str) -> None:
     if not wishes:
-        await message.answer(empty_text)
+        await message.answer(empty_text, reply_markup=main_menu_keyboard())
         return
 
+    await message.answer("📋 Ваш список:", reply_markup=main_menu_keyboard())
     for category, items in sort_wishes_for_display(wishes):
         for wish in items:
             caption = describe_wish_for_confirmation(wish)
-            keyboard_markup = build_list_actions_keyboard([wish]).as_markup()
+            keyboard_markup = build_wish_actions_keyboard(int(wish.id)) if wish.id is not None else None
             if wish.image_url or wish.image:
                 await _send_photo_with_optional_text(message, wish, caption, keyboard_markup)
             else:

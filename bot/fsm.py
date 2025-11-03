@@ -6,7 +6,9 @@ class AddWish(StatesGroup):
 
 
 class EditWish(StatesGroup):
-    waiting_value = State()
+    waiting_for_title = State()
+    waiting_for_url = State()
+    waiting_for_photo = State()
 
 
 class UserSession(StatesGroup):

@@ -1,5 +1,8 @@
 import logging
+from typing import Any, Optional
+
 import asyncpg
+
 from core.models import Wish
 
 
@@ -57,24 +60,44 @@ class Storage:
                 return False
             return bool(row["is_active"])
 
+    @staticmethod
+    def _row_to_wish(row: Optional[asyncpg.Record]) -> Wish | None:
+        if row is None:
+            return None
+        return Wish(
+            id=row["id"],
+            title=row["title"],
+            link=row["link"],
+            category=row["category"],
+            description=row["description"],
+            priority=row["priority"],
+            image=row["image"],
+            image_url=row["image_url"],
+        )
+
+    async def _update_and_fetch(self, query: str, *args: Any) -> Wish | None:
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                row = await conn.fetchrow(query, *args)
+        return self._row_to_wish(row)
+
     async def list_wishes(self, user_id: int) -> list[Wish]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 """
                 SELECT id, title, link, category, description, priority, image, image_url
                 FROM wishes
-                WHERE user_id=$1
+                WHERE user_id = $1
                 ORDER BY category, priority DESC
                 """,
-                user_id
+                user_id,
             )
-            return [
-                Wish(
-                    id=row['id'], title=row['title'], link=row['link'], category=row['category'],
-                    description=row['description'], priority=row['priority'],
-                    image=row['image'], image_url=row['image_url']
-                ) for row in rows
-            ]
+        wishes: list[Wish] = []
+        for row in rows:
+            wish = self._row_to_wish(row)
+            if wish is not None:
+                wishes.append(wish)
+        return wishes
 
     async def add_wish(self, user_id: int, wish: Wish) -> None:
         """
@@ -94,82 +117,112 @@ class Storage:
                     INSERT INTO wishes (user_id, title, link, category, description, priority, image, image_url)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     """,
-                    user_id, *wish.as_tuple()
+                    user_id,
+                    *wish.as_tuple(),
                 )
-        except asyncpg.PostgresError as e:
-            logging.error(f"Failed to add wish for user {user_id}: {e}")
+        except asyncpg.PostgresError as exc:
+            logging.error("Failed to add wish for user %s: %s", user_id, exc)
             raise
 
     async def find_wish(self, user_id: int, wish_id: int) -> Wish | None:
-        """
-        Найти желание по идентификатору пользователя и идентификатору желания.
-
-        Args:
-            user_id (int): Идентификатор пользователя.
-            wish_id (int): Идентификатор желания.
-
-        Returns:
-            Optional[Wish]: Найденное желание или None, если не найдено.
-        """
-        wish_id = int(wish_id)  # Приведение wish_id к целому числу
+        wish_id = int(wish_id)
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
                 SELECT id, title, link, category, description, priority, image, image_url
                 FROM wishes
-                WHERE user_id=$1 AND id=$2
+                WHERE user_id = $1 AND id = $2
                 """,
-                user_id, wish_id
+                user_id,
+                wish_id,
             )
-            if row:
-                return Wish(
-                    id=row['id'], title=row['title'], link=row['link'], category=row['category'],
-                    description=row['description'], priority=row['priority'],
-                    image=row['image'], image_url=row['image_url']
-                )
-            return None
+        return self._row_to_wish(row)
 
-    async def update_wish_field(self, user_id: int, wish_id: int, field: str, value: str | int) -> Wish | None:
-        """
-        Обновить указанное поле желания.
+    async def update_wish_title(self, user_id: int, wish_id: int, title: str) -> Wish | None:
+        return await self._update_and_fetch(
+            """
+            UPDATE wishes
+            SET title = $3
+            WHERE user_id = $1 AND id = $2
+            RETURNING id, title, link, category, description, priority, image, image_url
+            """,
+            user_id,
+            wish_id,
+            title,
+        )
 
-        Args:
-            user_id (int): Идентификатор пользователя.
-            wish_id (int): Идентификатор желания.
-            field (str): Поле для обновления.
-            value (str | int): Новое значение поля.
+    async def update_wish_url(self, user_id: int, wish_id: int, url: str | None) -> Wish | None:
+        return await self._update_and_fetch(
+            """
+            UPDATE wishes
+            SET link = $3
+            WHERE user_id = $1 AND id = $2
+            RETURNING id, title, link, category, description, priority, image, image_url
+            """,
+            user_id,
+            wish_id,
+            url,
+        )
 
-        Returns:
-            Optional[Wish]: Обновленное желание или None, если обновление не удалось.
-        """
-        async with self._pool.acquire() as conn:
-            await conn.execute(
-                f"""
-                UPDATE wishes
-                SET {field} = $1
-                WHERE user_id = $2 AND id = $3
-                """,
-                value, user_id, wish_id
-            )
-            return await self.find_wish(user_id, wish_id)
+    async def clear_wish_url(self, user_id: int, wish_id: int) -> Wish | None:
+        return await self.update_wish_url(user_id, wish_id, None)
+
+    async def update_wish_priority(self, user_id: int, wish_id: int, priority: int) -> Wish | None:
+        return await self._update_and_fetch(
+            """
+            UPDATE wishes
+            SET priority = $3
+            WHERE user_id = $1 AND id = $2
+            RETURNING id, title, link, category, description, priority, image, image_url
+            """,
+            user_id,
+            wish_id,
+            priority,
+        )
+
+    async def update_wish_photo(
+        self,
+        user_id: int,
+        wish_id: int,
+        *,
+        file_id: str,
+        image_bytes: bytes | None,
+    ) -> Wish | None:
+        return await self._update_and_fetch(
+            """
+            UPDATE wishes
+            SET image_url = $3,
+                image = $4
+            WHERE user_id = $1 AND id = $2
+            RETURNING id, title, link, category, description, priority, image, image_url
+            """,
+            user_id,
+            wish_id,
+            file_id,
+            image_bytes,
+        )
+
+    async def clear_wish_photo(self, user_id: int, wish_id: int) -> Wish | None:
+        return await self._update_and_fetch(
+            """
+            UPDATE wishes
+            SET image_url = NULL,
+                image = NULL
+            WHERE user_id = $1 AND id = $2
+            RETURNING id, title, link, category, description, priority, image, image_url
+            """,
+            user_id,
+            wish_id,
+        )
 
     async def delete_wish(self, user_id: int, wish_id: int) -> bool:
-        """
-        Удалить желание по идентификатору пользователя и идентификатору желания.
-
-        Args:
-            user_id (int): Идентификатор пользователя.
-            wish_id (int): Идентификатор желания.
-
-        Returns:
-            bool: True, если желание было удалено, иначе False.
-        """
         async with self._pool.acquire() as conn:
             result = await conn.execute(
                 """
                 DELETE FROM wishes
                 WHERE user_id = $1 AND id = $2
                 """,
-                user_id, wish_id
+                user_id,
+                wish_id,
             )
-            return result == "DELETE 1"
+        return result == "DELETE 1"
