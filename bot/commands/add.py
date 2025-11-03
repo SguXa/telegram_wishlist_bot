@@ -4,7 +4,7 @@ from uuid import uuid4
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, PhotoSize
 
 from bot.fsm import AddWish, UserSession
 from bot.shared_utils import ensure_authorized, get_storage
@@ -57,7 +57,17 @@ async def process_add_input(message: Message, state: FSMContext) -> None:
         return
 
     title, link = _extract_title_and_link(message.text)
-    wish = Wish(title=title, link=link, priority=_DEFAULT_PRIORITY)
+
+    image = None
+    image_url = None
+
+    if message.photo:
+        largest_photo: PhotoSize = message.photo[-1]
+        image_url = largest_photo.file_id
+        if largest_photo.file_size <= 10 * 1024 * 1024:  # Ограничение 10 МБ
+            image = await largest_photo.download(destination=bytes)
+
+    wish = Wish(title=title, link=link, priority=_DEFAULT_PRIORITY, image=image, image_url=image_url)
     await get_storage().add_wish(message.from_user.id, wish)
 
     await state.clear()
