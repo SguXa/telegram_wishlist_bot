@@ -12,7 +12,7 @@ router = Router()
 @router.message(Command("export"), StateFilter(UserSession.active))
 @ensure_authorized
 async def cmd_export(message: Message) -> None:
-    wishes = get_storage().list_wishes(message.from_user.id)
+    wishes = await get_storage().list_wishes(message.from_user.id)
     if not wishes:
         await message.answer(
             "Экспорт невозможен: список желаний пуст. Добавьте что-нибудь через /add."
