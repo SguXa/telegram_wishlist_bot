@@ -49,45 +49,16 @@ async def cmd_add(message: Message, state: FSMContext) -> None:
     await message.answer("Send a wish title or link. Use /cancel to abort.")
 
 
-@router.message(AddWish.waiting_input)
-@ensure_authorized(reset_state=True)
-async def add_wish_simple(message: Message, state: FSMContext) -> None:
-    photo_file_id = message.photo[-1].file_id if message.photo else ""
-    raw_text = message.caption if photo_file_id else message.text
-    text = (raw_text or "").strip()
-
-    if text and _is_cancel_command(text.lower()):
+@router.message(StateFilter(AddWish.waiting_input))
+async def process_add_input(message: Message, state: FSMContext) -> None:
+    if _is_cancel_command(message.text):
         await state.clear()
-        await state.set_state(UserSession.active)
-        await message.answer("Got it, cancelled.")
+        await message.answer("Adding wish canceled.")
         return
 
-    title = ""
-    link = ""
-    if text:
-        title, link = _extract_title_and_link(text)
-
-    if not title and not link:
-        if photo_file_id:
-            title = _UNTITLED_PHOTO_TITLE
-        else:
-            await message.answer("Please send a wish title or a link:")
-            return
-
-    if not title and not link:
-        title = _UNTITLED_PHOTO_TITLE
-
-    wish = Wish(
-        id=uuid4().hex,
-        title=title or link,
-        link=link,
-        category="",
-        description="",
-        priority=_DEFAULT_PRIORITY,
-        photo_file_id=photo_file_id,
-    )
-
+    title, link = _extract_title_and_link(message.text)
+    wish = Wish(title=title, link=link, priority=_DEFAULT_PRIORITY)
     await get_storage().add_wish(message.from_user.id, wish)
+
     await state.clear()
-    await state.set_state(UserSession.active)
-    await message.answer("Saved! Check /list to see everything.")
+    await message.answer("Wish added successfully!")
