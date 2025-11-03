@@ -5,6 +5,7 @@ from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, User
+from aiogram.types.input_file import BufferedInputFile
 
 from bot.fsm import UserSession
 from bot.keyboards import build_list_actions_keyboard
@@ -138,9 +139,15 @@ async def send_wish_list(message: Message, wishes: list[Wish], empty_text: str) 
         for wish in items:
             caption = describe_wish_for_confirmation(wish)
             keyboard = build_list_actions_keyboard([wish])
-            if wish.photo_file_id:
+            if wish.image_url:
                 await message.answer_photo(
-                    wish.photo_file_id,
+                    wish.image_url,
+                    caption=caption,
+                    reply_markup=keyboard.as_markup(),
+                )
+            elif wish.image:
+                await message.answer_photo(
+                    BufferedInputFile(wish.image, filename="image.jpg"),
                     caption=caption,
                     reply_markup=keyboard.as_markup(),
                 )
