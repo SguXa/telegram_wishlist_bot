@@ -1,6 +1,7 @@
 import re
 from io import BytesIO
 from typing import Optional
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from aiogram import Router
@@ -18,6 +19,8 @@ _URL_PATTERN = re.compile(r"(?i)\bhttps?://\S+")
 _TRAILING_PUNCTUATION = ".,!?:;\"')]>}"
 _DEFAULT_PRIORITY = 3
 _UNTITLED_PHOTO_TITLE = "Photo wish"
+_FALLBACK_LINK_TITLE_TEMPLATE = "Wish from {source}"
+_FALLBACK_LINK_TITLE_GENERIC = "Saved link"
 
 
 def _extract_title_and_link(text: Optional[str]) -> tuple[str, str]:
@@ -38,9 +41,21 @@ def _extract_title_and_link(text: Optional[str]) -> tuple[str, str]:
     elif after:
         title = after
     else:
-        title = link
+        title = _generate_fallback_title(link)
 
     return title, link
+
+
+def _generate_fallback_title(link: str) -> str:
+    parsed = urlparse(link)
+    source = parsed.netloc or parsed.path
+    if source:
+        source = source.split("/", 1)[0]
+        if source.startswith("www."):
+            source = source[4:]
+        if source:
+            return _FALLBACK_LINK_TITLE_TEMPLATE.format(source=source)
+    return _FALLBACK_LINK_TITLE_GENERIC
 
 
 def _is_cancel_command(text: Optional[str]) -> bool:
@@ -53,7 +68,7 @@ def _is_cancel_command(text: Optional[str]) -> bool:
 @ensure_authorized(require_session=True)
 async def cmd_add(message: Message, state: FSMContext) -> None:
     await state.set_state(AddWish.waiting_input)
-    await message.answer("Send a wish title or link. Use /cancel to abort.")
+    await message.answer("Отправте название, сылку или изображения 'желания'. Используйте /cancel для отмены.")
 
 
 @router.message(StateFilter(AddWish.waiting_input))
@@ -62,7 +77,7 @@ async def process_add_input(message: Message, state: FSMContext) -> None:
 
     if _is_cancel_command(raw_text):
         await state.clear()
-        await message.answer("Adding wish canceled.")
+        await message.answer("Добавления 'желания' отменено.")
         return
 
     title, link = _extract_title_and_link(raw_text)
@@ -83,10 +98,10 @@ async def process_add_input(message: Message, state: FSMContext) -> None:
             image = buffer.getvalue()
 
     if not title:
-        title = _UNTITLED_PHOTO_TITLE if message.photo else "Untitled wish"
+        title = _UNTITLED_PHOTO_TITLE if message.photo else "Неизвестное желание"
 
     wish = Wish(title=title, link=link, priority=_DEFAULT_PRIORITY, image=image, image_url=image_url)
     await get_storage().add_wish(message.from_user.id, wish)
 
     await state.clear()
-    await message.answer("Wish added successfully!")
+    await message.answer("Желание успешно добавлено!")
