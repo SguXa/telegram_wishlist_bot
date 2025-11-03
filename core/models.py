@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 @dataclass(slots=True)
@@ -9,12 +9,15 @@ class Wish:
     category: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[int] = None
-    photo_file_id: Optional[str] = None
+    image: Optional[bytes] = None
+    image_url: Optional[str] = None
     id: Optional[int] = None
 
-    def as_tuple(self) -> Tuple[str, Optional[str], Optional[str], Optional[str], Optional[int]]:
+    def as_tuple(self) -> Tuple[Union[str, None], ...]:
         """Порядок соответствует колонкам INSERT в БД."""
-        return (self.title, self.link, self.category, self.description, self.priority)
+        return (
+            self.title, self.link, self.category, self.description, self.priority, self.image, self.image_url
+        )
 
 
 Store = Dict[str, Any]
