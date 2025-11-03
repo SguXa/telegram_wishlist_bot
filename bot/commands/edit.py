@@ -13,7 +13,7 @@ router = Router()
 @router.message(Command("edit"), StateFilter(UserSession.active))
 @ensure_authorized
 async def cmd_edit(message: Message) -> None:
-    wishes = get_storage().list_wishes(message.from_user.id)
+    wishes = await get_storage().list_wishes(message.from_user.id)
     if not wishes:
         await message.answer(
             "Список желаний пуст. Добавьте что-нибудь через /add."
