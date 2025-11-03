@@ -17,7 +17,7 @@ async def cmd_search(message: Message, command: CommandObject) -> None:
         await message.answer("Укажите запрос: /search <слово>")
         return
 
-    wishes = get_storage().list_wishes(message.from_user.id)
+    wishes = await get_storage().list_wishes(message.from_user.id)
     matched = [
         wish
         for wish in wishes
