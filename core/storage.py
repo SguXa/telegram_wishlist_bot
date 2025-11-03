@@ -11,14 +11,20 @@ class Storage:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 """
-                SELECT id, title, link, category, description, priority, photo_file_id
+                SELECT id, title, link, category, description, priority, image, image_url
                 FROM wishes
                 WHERE user_id=$1
                 ORDER BY category, priority DESC
                 """,
                 user_id
             )
-            return [Wish(id=row['id'], title=row['title'], link=row['link'], category=row['category'], description=row['description'], priority=row['priority'], photo_file_id=row['photo_file_id']) for row in rows]
+            return [
+                Wish(
+                    id=row['id'], title=row['title'], link=row['link'], category=row['category'],
+                    description=row['description'], priority=row['priority'],
+                    image=row['image'], image_url=row['image_url']
+                ) for row in rows
+            ]
 
     async def add_wish(self, user_id: int, wish: Wish) -> None:
         """
@@ -35,8 +41,8 @@ class Storage:
             async with self._pool.acquire() as conn:
                 await conn.execute(
                     """
-                    INSERT INTO wishes (user_id, title, link, category, description, priority)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    INSERT INTO wishes (user_id, title, link, category, description, priority, image, image_url)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     """,
                     user_id, *wish.as_tuple()
                 )
@@ -59,7 +65,7 @@ class Storage:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
-                SELECT id, title, link, category, description, priority, photo_file_id
+                SELECT id, title, link, category, description, priority, image, image_url
                 FROM wishes
                 WHERE user_id=$1 AND id=$2
                 """,
@@ -67,13 +73,9 @@ class Storage:
             )
             if row:
                 return Wish(
-                    id=row['id'],
-                    title=row['title'],
-                    link=row['link'],
-                    category=row['category'],
-                    description=row['description'],
-                    priority=row['priority'],
-                    photo_file_id=row['photo_file_id']
+                    id=row['id'], title=row['title'], link=row['link'], category=row['category'],
+                    description=row['description'], priority=row['priority'],
+                    image=row['image'], image_url=row['image_url']
                 )
             return None
 
