@@ -55,6 +55,7 @@ class Storage:
         Returns:
             Optional[Wish]: Найденное желание или None, если не найдено.
         """
+        wish_id = int(wish_id)  # Приведение wish_id к целому числу
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
