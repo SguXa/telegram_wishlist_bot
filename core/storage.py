@@ -1,6 +1,6 @@
 import logging
 import asyncpg
-from core.models.wish import Wish
+from core.models import Wish as WishModel
 
 
 class Storage:
@@ -12,13 +12,13 @@ class Storage:
             rows = await conn.fetch("SELECT * FROM wishes WHERE user_id=$1 ORDER BY category, priority DESC", user_id)
             return rows
 
-    async def add_wish(self, user_id: int, wish: Wish) -> None:
+    async def add_wish(self, user_id: int, wish: WishModel) -> None:
         """
         Add a new wish to the database.
 
         Args:
             user_id (int): The ID of the user adding the wish.
-            wish (Wish): The wish object containing details to be added.
+            wish (WishModel): The wish object containing details to be added.
 
         Raises:
             asyncpg.PostgresError: If there is an error during the database operation.
