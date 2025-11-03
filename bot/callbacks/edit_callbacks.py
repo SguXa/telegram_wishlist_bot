@@ -19,7 +19,7 @@ router = Router()
 async def callback_edit(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
     wish_id = callback.data.split(":", 1)[1]
-    wish = storage.find_wish(callback.from_user.id, wish_id)
+    wish = await storage.find_wish(callback.from_user.id, wish_id)
     if not wish:
         await callback.answer(
             "Желание не найдено. Возможно, оно было изменено или удалено.",
