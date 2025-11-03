@@ -9,6 +9,7 @@ class Wish:
     category: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[int] = None
+    photo_file_id: Optional[str] = None
 
     def as_tuple(self) -> Tuple[str, Optional[str], Optional[str], Optional[str], Optional[int]]:
         """Порядок соответствует колонкам INSERT в БД."""
