@@ -1,16 +1,18 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 
-@dataclass
+@dataclass(slots=True)
 class Wish:
-    id: str
     title: str
-    link: str
-    category: str
-    description: str
-    priority: int
-    photo_file_id: str = ""
+    link: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[int] = None
+
+    def as_tuple(self) -> Tuple[str, Optional[str], Optional[str], Optional[str], Optional[int]]:
+        """Порядок соответствует колонкам INSERT в БД."""
+        return (self.title, self.link, self.category, self.description, self.priority)
 
 
 Store = Dict[str, Any]
