@@ -19,7 +19,7 @@ async def cmd_others(message: Message) -> None:
         )
         return
 
-    wishes = get_storage().list_wishes(other_id)
+    wishes = await get_storage().list_wishes(other_id)
     await send_wish_list(
         message,
         wishes,
