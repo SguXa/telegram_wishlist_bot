@@ -13,7 +13,7 @@ router = Router()
 @router.message(Command("delete"), StateFilter(UserSession.active))
 @ensure_authorized
 async def cmd_delete(message: Message) -> None:
-    wishes = get_storage().list_wishes(message.from_user.id)
+    wishes = await get_storage().list_wishes(message.from_user.id)
     if not wishes:
         await message.answer(
             "Список желаний пуст. Удалять нечего."
