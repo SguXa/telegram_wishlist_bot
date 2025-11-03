@@ -19,6 +19,7 @@ router = Router()
 async def callback_edit(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
     wish_id = callback.data.split(":", 1)[1]
+    wish_id = int(wish_id)  # Приведение wish_id к целому числу
     wish = await storage.find_wish(callback.from_user.id, wish_id)
     if not wish:
         await callback.answer(
@@ -48,7 +49,8 @@ async def callback_edit(callback: CallbackQuery, state: FSMContext) -> None:
 async def callback_edit_field(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
     _, wish_id, field = callback.data.split(":", 2)
-    wish = storage.find_wish(callback.from_user.id, wish_id)
+    wish_id = int(wish_id)  # Приведение wish_id к целому числу
+    wish = await storage.find_wish(callback.from_user.id, wish_id)
     if not wish:
         await callback.answer(
             "Желание не найдено. Возможно, оно было изменено или удалено.",
@@ -89,6 +91,7 @@ async def process_edit_value(message: Message, state: FSMContext) -> None:
     new_value_raw = (message.text or "").strip()
     user_id = message.from_user.id
 
+    wish_id = int(wish_id)  # Приведение wish_id к целому числу
     if field == "priority":
         if not new_value_raw.isdigit():
             await message.answer(
