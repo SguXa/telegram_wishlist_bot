@@ -11,14 +11,14 @@ class Storage:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 """
-                SELECT title, link, category, description, priority, photo_file_id
+                SELECT id, title, link, category, description, priority, photo_file_id
                 FROM wishes
                 WHERE user_id=$1
                 ORDER BY category, priority DESC
                 """,
                 user_id
             )
-            return [Wish(*row) for row in rows]
+            return [Wish(id=row['id'], title=row['title'], link=row['link'], category=row['category'], description=row['description'], priority=row['priority'], photo_file_id=row['photo_file_id']) for row in rows]
 
     async def add_wish(self, user_id: int, wish: Wish) -> None:
         """
