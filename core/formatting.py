@@ -4,6 +4,8 @@ from collections import defaultdict
 from html import escape as html_escape
 from typing import Dict, List, Tuple
 
+from aiogram.types import InputFile, Message
+
 from core.models import Wish
 
 
@@ -66,6 +68,8 @@ def build_wish_block(wish: Wish) -> str:
         lines.append(f"   🔗 {escape_html_text(wish.link)}")
     if wish.description:
         lines.append(f"   💬 {escape_html_text(wish.description)}")
+    if wish.image_url:
+        lines.append(f"   🖼️ [Image URL](https://t.me/{escape_html_text(wish.image_url)})")
     return "\n".join(lines)
 
 
@@ -110,7 +114,6 @@ def compose_export_csv(wishes: List[Wish]) -> str:
           "Категория",
           "Описание",
           "Приоритет",
-          "ID фото",
         ]
     )
     for wish in wishes:
@@ -121,7 +124,18 @@ def compose_export_csv(wishes: List[Wish]) -> str:
                 wish.category,
                 wish.description,
                 wish.priority,
-                wish.photo_file_id,
             ]
         )
     return output.getvalue()
+
+
+async def send_wish_list(message: Message, wishes: List[Wish], footer: str) -> None:
+    for wish in wishes:
+        if wish.image_url:
+            await message.answer_photo(photo=wish.image_url, caption=build_wish_block(wish))
+        elif wish.image:
+            await message.answer_photo(photo=InputFile(wish.image), caption=build_wish_block(wish))
+        else:
+            await message.answer(build_wish_block(wish))
+    if footer:
+        await message.answer(footer)

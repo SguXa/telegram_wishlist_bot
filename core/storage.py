@@ -1,123 +1,175 @@
-import asyncio
-import json
 import logging
-from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional
-
-from core.models import Store, Wish
+import asyncpg
+from core.models import Wish
 
 
 class Storage:
-    def __init__(self, data_file: Path, authorized_numeric_ids: Iterable[str]):
-        self._data_file = data_file
-        self._authorized_ids = {str(identifier) for identifier in authorized_numeric_ids}
-        self._lock = asyncio.Lock()
-        self._store: Store = {"users": {identifier: [] for identifier in self._authorized_ids}}
+    def __init__(self, pool: asyncpg.Pool):
+        self._pool = pool
 
-    def load(self) -> None:
-        if self._data_file.exists():
-            try:
-                loaded = json.loads(self._data_file.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                logging.warning("Failed to decode storage file, starting fresh.")
-                loaded = {}
-        else:
-            loaded = {}
+    async def ensure_session_schema(self) -> None:
+        """Ensure the auxiliary table for user session tracking exists."""
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    user_id BIGINT PRIMARY KEY,
+                    is_active BOOLEAN NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
 
-        users = loaded.get("users", {})
-        for user_id in self._authorized_ids:
-            users.setdefault(user_id, [])
+    async def set_session_state(self, user_id: int, is_active: bool) -> None:
+        """Persist the desired session state for a given user."""
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO user_sessions (user_id, is_active, updated_at)
+                VALUES ($1, $2, NOW())
+                ON CONFLICT (user_id)
+                DO UPDATE
+                SET is_active = EXCLUDED.is_active,
+                    updated_at = NOW()
+                """,
+                user_id,
+                is_active,
+            )
 
-        self._store = {"users": users}
-        self.persist()
+    async def mark_session_active(self, user_id: int) -> None:
+        await self.set_session_state(user_id, True)
 
-    def persist(self) -> None:
-        self._data_file.write_text(json.dumps(self._store, ensure_ascii=False, indent=2), encoding="utf-8")
+    async def mark_session_inactive(self, user_id: int) -> None:
+        await self.set_session_state(user_id, False)
 
-    async def mutate(self, mutator: Callable[[Store], Any]) -> Any:
-        async with self._lock:
-            result = mutator(self._store)
-            self.persist()
-            return result
+    async def is_session_active(self, user_id: int) -> bool:
+        """Return True when a persisted session token exists for the user."""
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT is_active
+                FROM user_sessions
+                WHERE user_id = $1
+                """,
+                user_id,
+            )
+            if row is None:
+                return False
+            return bool(row["is_active"])
 
-    def list_wishes(self, user_id: int) -> List[Wish]:
-        return [self._dict_to_wish(raw) for raw in self._store["users"].get(str(user_id), [])]
-
-    def find_wish(self, user_id: int, wish_id: str) -> Optional[Wish]:
-        for wish in self.list_wishes(user_id):
-            if wish.id == wish_id:
-                return wish
-        return None
+    async def list_wishes(self, user_id: int) -> list[Wish]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id, title, link, category, description, priority, image, image_url
+                FROM wishes
+                WHERE user_id=$1
+                ORDER BY category, priority DESC
+                """,
+                user_id
+            )
+            return [
+                Wish(
+                    id=row['id'], title=row['title'], link=row['link'], category=row['category'],
+                    description=row['description'], priority=row['priority'],
+                    image=row['image'], image_url=row['image_url']
+                ) for row in rows
+            ]
 
     async def add_wish(self, user_id: int, wish: Wish) -> None:
-        user_key = str(user_id)
+        """
+        Add a new wish to the database.
 
-        def mutator(current: Store) -> None:
-            current["users"].setdefault(user_key, [])
-            current["users"][user_key].append(self._wish_to_dict(wish))
+        Args:
+            user_id (int): The ID of the user adding the wish.
+            wish (Wish): The wish object containing details to be added.
 
-        await self.mutate(mutator)
+        Raises:
+            asyncpg.PostgresError: If there is an error during the database operation.
+        """
+        try:
+            async with self._pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO wishes (user_id, title, link, category, description, priority, image, image_url)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    """,
+                    user_id, *wish.as_tuple()
+                )
+        except asyncpg.PostgresError as e:
+            logging.error(f"Failed to add wish for user {user_id}: {e}")
+            raise
 
-    async def update_wish_field(self, user_id: int, wish_id: str, field: str, value: Any) -> Optional[Wish]:
-        user_key = str(user_id)
-        updated: Optional[Wish] = None
+    async def find_wish(self, user_id: int, wish_id: int) -> Wish | None:
+        """
+        Найти желание по идентификатору пользователя и идентификатору желания.
 
-        def mutator(current: Store) -> None:
-            nonlocal updated
-            for wish in current["users"].setdefault(user_key, []):
-                if wish["id"] == wish_id:
-                    wish[field] = value
-                    updated = self._dict_to_wish(wish)
-                    break
+        Args:
+            user_id (int): Идентификатор пользователя.
+            wish_id (int): Идентификатор желания.
 
-        await self.mutate(mutator)
-        return updated
+        Returns:
+            Optional[Wish]: Найденное желание или None, если не найдено.
+        """
+        wish_id = int(wish_id)  # Приведение wish_id к целому числу
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT id, title, link, category, description, priority, image, image_url
+                FROM wishes
+                WHERE user_id=$1 AND id=$2
+                """,
+                user_id, wish_id
+            )
+            if row:
+                return Wish(
+                    id=row['id'], title=row['title'], link=row['link'], category=row['category'],
+                    description=row['description'], priority=row['priority'],
+                    image=row['image'], image_url=row['image_url']
+                )
+            return None
 
-    async def delete_wish(self, user_id: int, wish_id: str) -> bool:
-        user_key = str(user_id)
-        removed = False
+    async def update_wish_field(self, user_id: int, wish_id: int, field: str, value: str | int) -> Wish | None:
+        """
+        Обновить указанное поле желания.
 
-        def mutator(current: Store) -> None:
-            nonlocal removed
-            wishes = current["users"].setdefault(user_key, [])
-            original_length = len(wishes)
-            wishes[:] = [wish for wish in wishes if wish["id"] != wish_id]
-            removed = len(wishes) != original_length
+        Args:
+            user_id (int): Идентификатор пользователя.
+            wish_id (int): Идентификатор желания.
+            field (str): Поле для обновления.
+            value (str | int): Новое значение поля.
 
-        await self.mutate(mutator)
-        return removed
+        Returns:
+            Optional[Wish]: Обновленное желание или None, если обновление не удалось.
+        """
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                f"""
+                UPDATE wishes
+                SET {field} = $1
+                WHERE user_id = $2 AND id = $3
+                """,
+                value, user_id, wish_id
+            )
+            return await self.find_wish(user_id, wish_id)
 
-    def collect_categories(self) -> List[str]:
-        categories = set()
-        for wishes in self._store["users"].values():
-            for wish in wishes:
-                name = (wish.get("category") or "").strip()
-                if name:
-                    categories.add(name)
-        if not categories:
-            return []
-        return sorted(categories, key=lambda item: item.casefold())
+    async def delete_wish(self, user_id: int, wish_id: int) -> bool:
+        """
+        Удалить желание по идентификатору пользователя и идентификатору желания.
 
-    @staticmethod
-    def _dict_to_wish(raw: Store) -> Wish:
-        return Wish(
-            id=raw["id"],
-            title=raw["title"],
-            link=raw.get("link", ""),
-            category=raw.get("category", ""),
-            description=raw.get("description", ""),
-            priority=int(raw.get("priority", 0)),
-            photo_file_id=raw.get("photo_file_id", ""),
-        )
+        Args:
+            user_id (int): Идентификатор пользователя.
+            wish_id (int): Идентификатор желания.
 
-    @staticmethod
-    def _wish_to_dict(wish: Wish) -> Store:
-        return {
-            "id": wish.id,
-            "title": wish.title,
-            "link": wish.link,
-            "category": wish.category,
-            "description": wish.description,
-            "priority": wish.priority,
-            "photo_file_id": wish.photo_file_id,
-        }
+        Returns:
+            bool: True, если желание было удалено, иначе False.
+        """
+        async with self._pool.acquire() as conn:
+            result = await conn.execute(
+                """
+                DELETE FROM wishes
+                WHERE user_id = $1 AND id = $2
+                """,
+                user_id, wish_id
+            )
+            return result == "DELETE 1"

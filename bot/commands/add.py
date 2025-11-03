@@ -1,10 +1,13 @@
 import re
+from io import BytesIO
+from typing import Optional
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from aiogram import Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, PhotoSize
 
 from bot.fsm import AddWish, UserSession
 from bot.shared_utils import ensure_authorized, get_storage
@@ -16,9 +19,14 @@ _URL_PATTERN = re.compile(r"(?i)\bhttps?://\S+")
 _TRAILING_PUNCTUATION = ".,!?:;\"')]>}"
 _DEFAULT_PRIORITY = 3
 _UNTITLED_PHOTO_TITLE = "Photo wish"
+_FALLBACK_LINK_TITLE_TEMPLATE = "Wish from {source}"
+_FALLBACK_LINK_TITLE_GENERIC = "Saved link"
 
 
-def _extract_title_and_link(text: str) -> tuple[str, str]:
+def _extract_title_and_link(text: Optional[str]) -> tuple[str, str]:
+    if not text:
+        return "", ""
+
     match = _URL_PATTERN.search(text)
     if not match:
         return text, ""
@@ -33,61 +41,67 @@ def _extract_title_and_link(text: str) -> tuple[str, str]:
     elif after:
         title = after
     else:
-        title = link
+        title = _generate_fallback_title(link)
 
     return title, link
 
 
-def _is_cancel_command(text: str) -> bool:
-    return text in {"/cancel", "cancel", "stop"}
+def _generate_fallback_title(link: str) -> str:
+    parsed = urlparse(link)
+    source = parsed.netloc or parsed.path
+    if source:
+        source = source.split("/", 1)[0]
+        if source.startswith("www."):
+            source = source[4:]
+        if source:
+            return _FALLBACK_LINK_TITLE_TEMPLATE.format(source=source)
+    return _FALLBACK_LINK_TITLE_GENERIC
 
 
-@router.message(Command("add"), StateFilter(UserSession.active))
-@ensure_authorized
+def _is_cancel_command(text: Optional[str]) -> bool:
+    if text is None:
+        return False
+    return text.strip().lower() in {"/cancel", "cancel", "stop"}
+
+
+@router.message(Command("add"))
+@ensure_authorized(require_session=True)
 async def cmd_add(message: Message, state: FSMContext) -> None:
     await state.set_state(AddWish.waiting_input)
-    await message.answer("Send a wish title or link. Use /cancel to abort.")
+    await message.answer("Отправте название, сылку или изображения 'желания'. Используйте /cancel для отмены.")
 
 
-@router.message(AddWish.waiting_input)
-@ensure_authorized(reset_state=True)
-async def add_wish_simple(message: Message, state: FSMContext) -> None:
-    photo_file_id = message.photo[-1].file_id if message.photo else ""
-    raw_text = message.caption if photo_file_id else message.text
-    text = (raw_text or "").strip()
+@router.message(StateFilter(AddWish.waiting_input))
+async def process_add_input(message: Message, state: FSMContext) -> None:
+    raw_text = message.text if message.text is not None else message.caption
 
-    if text and _is_cancel_command(text.lower()):
+    if _is_cancel_command(raw_text):
         await state.clear()
-        await state.set_state(UserSession.active)
-        await message.answer("Got it, cancelled.")
+        await message.answer("Добавления 'желания' отменено.")
         return
 
-    title = ""
-    link = ""
-    if text:
-        title, link = _extract_title_and_link(text)
+    title, link = _extract_title_and_link(raw_text)
 
-    if not title and not link:
-        if photo_file_id:
-            title = _UNTITLED_PHOTO_TITLE
-        else:
-            await message.answer("Please send a wish title or a link:")
-            return
+    image = None
+    image_url = None
 
-    if not title and not link:
-        title = _UNTITLED_PHOTO_TITLE
+    if message.photo:
+        largest_photo: PhotoSize = message.photo[-1]
+        image_url = largest_photo.file_id
+        if (
+            largest_photo.file_size
+            and largest_photo.file_size <= 10 * 1024 * 1024
+            and message.bot is not None
+        ):
+            buffer = BytesIO()
+            await message.bot.download(largest_photo, destination=buffer)
+            image = buffer.getvalue()
 
-    wish = Wish(
-        id=uuid4().hex,
-        title=title or link,
-        link=link,
-        category="",
-        description="",
-        priority=_DEFAULT_PRIORITY,
-        photo_file_id=photo_file_id,
-    )
+    if not title:
+        title = _UNTITLED_PHOTO_TITLE if message.photo else "Неизвестное желание"
 
+    wish = Wish(title=title, link=link, priority=_DEFAULT_PRIORITY, image=image, image_url=image_url)
     await get_storage().add_wish(message.from_user.id, wish)
+
     await state.clear()
-    await state.set_state(UserSession.active)
-    await message.answer("Saved! Check /list to see everything.")
+    await message.answer("Желание успешно добавлено!")

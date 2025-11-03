@@ -13,7 +13,8 @@ router = Router()
 async def callback_delete(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
     wish_id = callback.data.split(":", 1)[1]
-    wish = storage.find_wish(callback.from_user.id, wish_id)
+    wish_id = int(wish_id)  # Приведение wish_id к целому числу
+    wish = await storage.find_wish(callback.from_user.id, wish_id)  # Добавлено await
     if not wish:
         await callback.answer(
             "Желание не найдено. Возможно, оно уже удалено.",
@@ -42,7 +43,13 @@ async def callback_cancel(callback: CallbackQuery, state: FSMContext) -> None:
 @ensure_active_session
 async def callback_delete_confirm(callback: CallbackQuery, state: FSMContext) -> None:
     storage = get_storage()
-    wish_id = callback.data.split(":", 1)[1]
+    wish_id_raw = callback.data.split(":", 1)[1]
+    try:
+        wish_id = int(wish_id_raw)
+    except ValueError:
+        await callback.answer("Некорректный идентификатор желания.", show_alert=True)
+        return
+
     removed = await storage.delete_wish(callback.from_user.id, wish_id)
     if removed:
         await callback.message.answer("Желание удалено.")
