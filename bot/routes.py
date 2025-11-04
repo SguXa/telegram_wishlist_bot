@@ -19,6 +19,7 @@ def register_routes(dp: Dispatcher, storage: Storage) -> None:
         login,
         logout,
         others,
+        settings,
         search,
         start,
     )
@@ -36,9 +37,9 @@ def register_routes(dp: Dispatcher, storage: Storage) -> None:
         edit,
         delete,
         export,
+        settings,
         edit_callbacks,
         delete_callbacks,
         export_callbacks,
     ):
         dp.include_router(module.router)
-
