@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from core.formatting import escape_html_text
+from core.formatting import category_to_emoji, escape_html_text
 from core.models import Wish
 
 MY_LIST_BUTTON = "📋 Мой список"
@@ -44,11 +44,26 @@ def logged_out_keyboard() -> ReplyKeyboardMarkup:
 
 
 def build_wish_card(wish: Wish) -> str:
-    priority = str(wish.priority) if wish.priority is not None else "—"
-    title = escape_html_text(wish.title) if wish.title else "—"
-    url = escape_html_text(wish.link) if wish.link else "—"
-    has_photo = "есть" if (wish.image_url or wish.image) else "нет"
-    return f"⭐ P={priority} | 📝 {title}\n🔗 {url}\n🖼️ {has_photo}"
+    title = escape_html_text(wish.title) if wish.title else "Без названия"
+    emoji = category_to_emoji(wish.category) if wish.category else ""
+    title_line = f"{emoji} <b>{title}</b>" if emoji else f"<b>{title}</b>"
+
+    lines = [title_line]
+
+    if wish.description:
+        lines.append(escape_html_text(wish.description))
+
+    if wish.link:
+        lines.append(f"🔗 {escape_html_text(wish.link)}")
+
+    meta_parts: list[str] = []
+    if wish.priority is not None:
+        meta_parts.append(f"⭐ Приоритет {wish.priority}")
+
+    if meta_parts:
+        lines.append(" · ".join(meta_parts))
+
+    return "\n".join(lines)
 
 
 def build_wish_actions_keyboard(wish_id: int) -> InlineKeyboardMarkup:

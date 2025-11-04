@@ -16,7 +16,7 @@ from core.config import (
     AUTHORIZED_NUMERIC_IDS,
     canonicalize_identifier,
 )
-from core.formatting import DEFAULT_CATEGORY_TITLE, category_to_emoji, escape_html_text, sort_wishes_for_display
+from core.formatting import sort_wishes_for_display
 from core.models import Wish
 from core.storage import Storage
 from ui.keyboards import (
@@ -179,9 +179,7 @@ def _extract_state(args: tuple[Any, ...], kwargs: dict[str, Any]) -> Optional[FS
 
 
 def describe_wish_for_confirmation(wish: Wish) -> str:
-    emoji = category_to_emoji(wish.category)
-    category = escape_html_text(wish.category or DEFAULT_CATEGORY_TITLE)
-    return f"{emoji} {category}\n{build_wish_card(wish)}"
+    return build_wish_card(wish)
 
 
 MAX_CAPTION_LENGTH = 1024
