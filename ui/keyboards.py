@@ -8,12 +8,14 @@ MY_LIST_BUTTON = "📋 Мой список"
 ADD_BUTTON = "➕ Добавить"
 SETTINGS_BUTTON = "⚙️ Настройки"
 PARTNER_LIST_BUTTON = "💞 Список партнёра"
+CLEAR_HISTORY_BUTTON = "🧹 Очистить чат"
 
 
 def main_menu_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
         [KeyboardButton(text=MY_LIST_BUTTON), KeyboardButton(text=ADD_BUTTON)],
         [KeyboardButton(text=PARTNER_LIST_BUTTON), KeyboardButton(text=SETTINGS_BUTTON)],
+        [KeyboardButton(text=CLEAR_HISTORY_BUTTON)],
     ]
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
