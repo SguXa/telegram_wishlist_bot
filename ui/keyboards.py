@@ -58,7 +58,7 @@ def build_wish_card(wish: Wish) -> str:
 
     meta_parts: list[str] = []
     if wish.priority is not None:
-        meta_parts.append(f"⭐ Приоритет {wish.priority}")
+        meta_parts.append(f"⭐ Приоритет {wish.priority}/5")
 
     if meta_parts:
         lines.append(" · ".join(meta_parts))
