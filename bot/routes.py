@@ -11,6 +11,7 @@ def register_routes(dp: Dispatcher, storage: Storage) -> None:
     from bot.commands import (
         add,
         categories,
+        clear_history,
         delete,
         edit,
         export,
@@ -38,6 +39,7 @@ def register_routes(dp: Dispatcher, storage: Storage) -> None:
         delete,
         export,
         settings,
+        clear_history,
         edit_callbacks,
         delete_callbacks,
         export_callbacks,
