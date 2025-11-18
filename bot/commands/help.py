@@ -20,6 +20,7 @@ async def cmd_help(message: Message, state: FSMContext) -> None:
 "/others - посмотреть списки друзей.\n"
 "/categories - просмотреть категории.\n"
 "/search - выполнить поиск по желаниям.\n"
-"/export - выгрузить список в TXT или CSV."
+"/export - выгрузить список в TXT или CSV.\n"
+"/clear_history - очистить историю чата с ботом."
     )
     await message.answer(help_text)
