@@ -7,7 +7,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from bot.shared_utils import ensure_authorized
-from ui.keyboards import CLEAR_HISTORY_BUTTON, main_menu_keyboard
 
 router = Router()
 
@@ -42,7 +41,6 @@ async def _wipe_recent_messages(message: Message, *, limit: int = _MAX_MESSAGES_
 
 
 @router.message(Command("clear_history"))
-@router.message(F.text == CLEAR_HISTORY_BUTTON)
 @ensure_authorized(require_session=True)
 async def cmd_clear_history(message: Message, state: FSMContext) -> None:
     deleted = await _wipe_recent_messages(message)
@@ -51,3 +49,4 @@ async def cmd_clear_history(message: Message, state: FSMContext) -> None:
         "в пределах ограничений Telegram.",
         reply_markup=main_menu_keyboard(),
     )
+
