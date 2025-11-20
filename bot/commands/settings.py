@@ -39,6 +39,7 @@ async def cmd_settings(message: Message, state: FSMContext) -> None:
     lines.extend(
         [
             "Доступные действия:",
+            "- /clear_history - Очистить чат.",
             "- /export — выгрузить список желаний в файл.",
             "- /logout — завершить текущий сеанс.",
             "- /help — подсказки по командам.",
