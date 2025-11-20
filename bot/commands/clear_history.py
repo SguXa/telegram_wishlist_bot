@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from bot.shared_utils import ensure_authorized
+from ui.keyboards import main_menu_keyboard
 
 router = Router()
 
@@ -49,4 +50,5 @@ async def cmd_clear_history(message: Message, state: FSMContext) -> None:
         "в пределах ограничений Telegram.",
         reply_markup=main_menu_keyboard(),
     )
+
 
