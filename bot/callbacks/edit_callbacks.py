@@ -172,6 +172,17 @@ async def handle_edit_callback(callback: CallbackQuery, state: FSMContext) -> No
         await callback.answer()
         return
 
+    if parsed.action == "description":
+        # Переход в состояние ввода описания
+        await state.set_state(EditWish.waiting_for_description)
+        await state.update_data(wish_id=parsed.item_id)
+        await callback.message.answer(
+            "💬 Введите новое описание (или оставьте пустым, чтобы очистить)",
+            reply_markup=cancel_input_keyboard("Введите описание"),
+        )
+        await callback.answer()
+        return
+
     if parsed.action == "url":
         if parsed.value == "clear":
             updated = await get_storage().clear_wish_url(callback.from_user.id, parsed.item_id)
@@ -223,6 +234,7 @@ def _state_requires_edit(state_name: Optional[str]) -> bool:
         EditWish.waiting_for_title.state,
         EditWish.waiting_for_url.state,
         EditWish.waiting_for_photo.state,
+        EditWish.waiting_for_description.state,
     }
 
 
@@ -354,3 +366,30 @@ async def handle_new_photo(message: Message, state: FSMContext) -> None:
         await _show_edit_card(message, updated)
     await state.clear()
     await state.set_state(UserSession.active)
+
+
+@router.message(EditWish.waiting_for_description)
+@ensure_authorized(require_session=True)
+async def handle_new_description(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").strip()
+    storage = get_storage()
+    data = await state.get_data()
+    wish_id = data.get("wish_id")
+    if not wish_id:
+        await message.answer("⚠️ Элемент не найден", reply_markup=main_menu_keyboard())
+        await state.clear()
+        await state.set_state(UserSession.active)
+        return
+
+    # Если пользователь отправил пустое описание — считаем, что нужно очистить.
+    description_value = raw if raw else None
+    updated = await storage.update_wish_description(message.from_user.id, int(wish_id), description_value)
+    if updated is None:
+        await message.answer("⚠️ Не удалось обновить описание", reply_markup=main_menu_keyboard())
+        await state.clear()
+        await state.set_state(UserSession.active)
+        return
+
+    await message.answer("✅ Описание обновлено", reply_markup=main_menu_keyboard())
+    # Возвращаемся к карточке с обновлёнными данными
+    await _return_to_card(message, state)
