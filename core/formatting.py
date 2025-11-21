@@ -62,7 +62,7 @@ def escape_html_text(value: str) -> str:
     return html_escape(value, quote=True) if value else ""
 
 
-def _shorten_link_for_display(link: str, max_length: int = 40) -> str:
+def _shorten_link_for_display(link: str, max_length: int = 25) -> str:
     """Вернуть укороченную версию ссылки для отображения в карточке.
 
     Показываем домен и начало пути, чтобы ссылка выглядела аккуратно, но
