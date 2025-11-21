@@ -151,6 +151,19 @@ class Storage:
             title,
         )
 
+    async def update_wish_description(self, user_id: int, wish_id: int, description: str | None) -> Wish | None:
+        return await self._update_and_fetch(
+            """
+            UPDATE wishes
+            SET description = $3
+            WHERE user_id = $1 AND id = $2
+            RETURNING id, title, link, category, description, priority, image, image_url
+            """,
+            user_id,
+            wish_id,
+            description,
+        )
+
     async def update_wish_url(self, user_id: int, wish_id: int, url: str | None) -> Wish | None:
         return await self._update_and_fetch(
             """
