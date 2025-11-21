@@ -62,14 +62,44 @@ def escape_html_text(value: str) -> str:
     return html_escape(value, quote=True) if value else ""
 
 
+def _shorten_link_for_display(link: str, max_length: int = 40) -> str:
+    """Вернуть укороченную версию ссылки для отображения в карточке.
+
+    Показываем домен и начало пути, чтобы ссылка выглядела аккуратно, но
+    оставалась узнаваемой. Полный URL остаётся в самом href.
+    """
+    if not link:
+        return ""
+
+    link = link.strip()
+
+    # Удаляем схему для красоты отображения: https://example.com/... → example.com/...
+    display = link
+    for prefix in ("https://", "http://"):
+        if display.startswith(prefix):
+            display = display[len(prefix) :]
+            break
+
+    if len(display) <= max_length:
+        return display
+
+    # Если очень длинно — обрезаем и добавляем многоточие.
+    return display[: max_length - 1] + "…"
+
+
 def build_wish_block(wish: Wish) -> str:
     lines = [f"({wish.priority}) {escape_html_text(wish.title)}"]
     if wish.link:
-        lines.append(f"   🔗 {escape_html_text(wish.link)}")
+        display_link = _shorten_link_for_display(wish.link)
+        # Для HTML parse_mode безопаснее использовать <a>, экранируя и текст, и href.
+        href = escape_html_text(wish.link)
+        display = escape_html_text(display_link)
+        lines.append(f"   🔗 <a href=\"{href}\">{display}</a>")
     if wish.description:
         lines.append(f"   💬 {escape_html_text(wish.description)}")
     if wish.image_url:
-        lines.append(f"   🖼️ [Image URL](https://t.me/{escape_html_text(wish.image_url)})")
+        image_url = escape_html_text(wish.image_url)
+        lines.append(f"   🖼️ <a href=\"https://t.me/{image_url}\">Image URL</a>")
     return "\n".join(lines)
 
 
