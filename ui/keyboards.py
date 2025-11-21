@@ -51,6 +51,7 @@ def build_wish_card(wish: Wish) -> str:
 
     lines = [title_line]
 
+    # Описание всегда под заголовком, если есть.
     if wish.description:
         lines.append(escape_html_text(wish.description))
 
@@ -83,6 +84,8 @@ def build_edit_menu(item_id: int, *, has_photo: bool) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="⭐ Приоритет", callback_data=f"edit:priority:{item_id}"))
     builder.row(InlineKeyboardButton(text="📝 Название", callback_data=f"edit:title:{item_id}"))
+    # Новая кнопка для редактирования описания
+    builder.row(InlineKeyboardButton(text="💬 Описание", callback_data=f"edit:description:{item_id}"))
     builder.row(
         InlineKeyboardButton(text="🔗 Ссылка", callback_data=f"edit:url:{item_id}"),
         InlineKeyboardButton(text="🗑️ Очистить", callback_data=f"edit:url:{item_id}:clear"),
