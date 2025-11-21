@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from core.formatting import category_to_emoji, escape_html_text
+from core.formatting import category_to_emoji, escape_html_text, _shorten_link_for_display
 from core.models import Wish
 
 MY_LIST_BUTTON = "📋 Мой список"
@@ -55,7 +55,10 @@ def build_wish_card(wish: Wish) -> str:
         lines.append(escape_html_text(wish.description))
 
     if wish.link:
-        lines.append(f"🔗 {escape_html_text(wish.link)}")
+        display_link = _shorten_link_for_display(wish.link)
+        href = escape_html_text(wish.link)
+        display = escape_html_text(display_link)
+        lines.append(f"🔗 <a href=\"{href}\">{display}</a>")
 
     meta_parts: list[str] = []
     if wish.priority is not None:
